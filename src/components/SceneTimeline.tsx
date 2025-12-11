@@ -19,8 +19,38 @@ export const SceneTimeline: React.FC<SceneTimelineProps> = ({
   const [expandedScene, setExpandedScene] = useState<string | null>(null);
 
   const getAssetFromPath = (path: string): BRollAsset | undefined => {
-    const filename = path.split('/').pop()?.replace('.mp4', '');
-    return assets.find(a => a.id === filename);
+    console.log(`[getAssetFromPath] Looking for path: ${path}`);
+    console.log(`[getAssetFromPath] Available assets:`, assets.map(a => ({
+      id: a.id,
+      filename: a.filename,
+      path: a.path,
+      videoUrl: a.videoUrl,
+      source: a.source
+    })));
+
+    // Try to match by full path first
+    let asset = assets.find(a => a.path === path || a.videoUrl === path);
+    if (asset) {
+      console.log(`[getAssetFromPath] ✅ Found by full path:`, asset.filename);
+      return asset;
+    }
+
+    // Try to match by filename
+    const filename = path.split('/').pop();
+    console.log(`[getAssetFromPath] Trying filename match: ${filename}`);
+    asset = assets.find(a =>
+      a.filename === filename ||
+      a.path?.split('/').pop() === filename ||
+      a.videoUrl?.split('/').pop() === filename
+    );
+
+    if (asset) {
+      console.log(`[getAssetFromPath] ✅ Found by filename:`, asset.filename);
+    } else {
+      console.log(`[getAssetFromPath] ❌ No match found for: ${path}`);
+    }
+
+    return asset;
   };
 
   return (
@@ -35,9 +65,9 @@ export const SceneTimeline: React.FC<SceneTimelineProps> = ({
       </h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {scenes.map(scene => (
+        {scenes.map((scene, index) => (
           <SceneRow
-            key={scene.sceneId}
+            key={scene.sceneId || `scene-${index}`}
             scene={scene}
             assets={assets}
             isExpanded={expandedScene === scene.sceneId}
@@ -104,7 +134,7 @@ const SceneRow: React.FC<SceneRowProps> = ({
             fontWeight: 600,
             color: '#3b82f6'
           }}>
-            {scene.sceneId.toUpperCase().replace('_', ' ')}
+            {(scene.sceneId || 'UNKNOWN').toUpperCase().replace('_', ' ')}
           </span>
           <span style={{
             fontSize: '15px',
@@ -120,7 +150,7 @@ const SceneRow: React.FC<SceneRowProps> = ({
             fontSize: '13px',
             color: '#94a3b8'
           }}>
-            {scene.cutaways.length} cutaways
+            {(scene.cutaways || []).length} cutaways
           </span>
           <svg
             width="20"

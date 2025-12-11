@@ -1,26 +1,90 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   GenerationSettings,
   ImageModel,
   VideoModel,
   StockSource,
+  SceneCutaway,
   IMAGE_MODEL_INFO,
   VIDEO_MODEL_INFO
 } from '../types';
+import { isExternalStockUrl, migrateExternalUrls, isStorageAvailable } from '../services/stockStorageService';
 
 interface SettingsModalProps {
   settings: GenerationSettings;
   onSettingsChange: (settings: GenerationSettings) => void;
   onClose: () => void;
   onBrowseStock?: () => void;
+  scenes?: SceneCutaway[];
+  onScenesUpdate?: (scenes: SceneCutaway[]) => void;
+  projectId?: string;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
   onSettingsChange,
   onClose,
-  onBrowseStock
+  onBrowseStock,
+  scenes,
+  onScenesUpdate,
+  projectId
 }) => {
+  // Migration state
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationProgress, setMigrationProgress] = useState<{
+    current: number;
+    total: number;
+    currentUrl: string;
+  } | null>(null);
+  const [storageAvailable, setStorageAvailable] = useState<boolean | null>(null);
+
+  // Count external stock URLs
+  const externalUrls = scenes?.flatMap(scene =>
+    scene.cutaways
+      .filter(c => isExternalStockUrl(c.video))
+      .map(c => c.video)
+  ) || [];
+  const uniqueExternalUrls = [...new Set(externalUrls)];
+
+  // Check storage availability
+  useEffect(() => {
+    isStorageAvailable().then(setStorageAvailable);
+  }, []);
+
+  // Handle migration
+  const handleMigrateStockVideos = async () => {
+    if (!scenes || !onScenesUpdate || uniqueExternalUrls.length === 0 || !projectId) return;
+
+    setIsMigrating(true);
+    setMigrationProgress({ current: 0, total: uniqueExternalUrls.length, currentUrl: '' });
+
+    try {
+      const urlMap = await migrateExternalUrls(
+        uniqueExternalUrls,
+        projectId,
+        (current, total, url) => {
+          setMigrationProgress({ current, total, currentUrl: url });
+        }
+      );
+
+      // Update scenes with new URLs
+      const updatedScenes = scenes.map(scene => ({
+        ...scene,
+        cutaways: scene.cutaways.map(cutaway => ({
+          ...cutaway,
+          video: urlMap.get(cutaway.video) || cutaway.video
+        }))
+      }));
+
+      onScenesUpdate(updatedScenes);
+      setMigrationProgress(null);
+    } catch (error) {
+      console.error('Migration failed:', error);
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   const handleImageModelChange = (model: ImageModel) => {
     onSettingsChange({ ...settings, imageModel: model });
   };
@@ -242,6 +306,158 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
           </Section>
+
+          {/* Stock Video Migration */}
+          {scenes && scenes.length > 0 && (
+            <Section title="Stock Video Storage" icon="💾">
+              <div style={{
+                padding: '16px',
+                background: '#0f172a',
+                borderRadius: '10px',
+                border: '1px solid #334155'
+              }}>
+                {storageAvailable === false ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    color: '#f59e0b'
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                      <line x1="12" y1="9" x2="12" y2="13" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                    <div>
+                      <p style={{ fontSize: '13px', fontWeight: 500, margin: 0 }}>Supabase Storage Not Available</p>
+                      <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                        Configure Supabase to enable local storage for stock videos
+                      </p>
+                    </div>
+                  </div>
+                ) : uniqueExternalUrls.length === 0 ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    color: '#22c55e'
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    <div>
+                      <p style={{ fontSize: '13px', fontWeight: 500, margin: 0 }}>All Videos Stored Locally</p>
+                      <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                        No external stock video URLs found
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#f1f5f9', margin: 0 }}>
+                          External Stock Videos Found
+                        </p>
+                        <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                          {uniqueExternalUrls.length} video{uniqueExternalUrls.length !== 1 ? 's' : ''} from Pexels/Pixabay
+                        </p>
+                      </div>
+                      <span style={{
+                        padding: '4px 10px',
+                        background: '#f59e0b20',
+                        color: '#f59e0b',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 600
+                      }}>
+                        {uniqueExternalUrls.length}
+                      </span>
+                    </div>
+
+                    {isMigrating && migrationProgress ? (
+                      <div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginBottom: '8px'
+                        }}>
+                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                            Downloading {migrationProgress.current} of {migrationProgress.total}
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#3b82f6' }}>
+                            {Math.round((migrationProgress.current / migrationProgress.total) * 100)}%
+                          </span>
+                        </div>
+                        <div style={{
+                          height: '8px',
+                          background: '#1e293b',
+                          borderRadius: '4px',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${(migrationProgress.current / migrationProgress.total) * 100}%`,
+                            background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                            borderRadius: '4px',
+                            transition: 'width 0.3s'
+                          }} />
+                        </div>
+                        <p style={{
+                          fontSize: '10px',
+                          color: '#64748b',
+                          margin: '8px 0 0 0',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {migrationProgress.currentUrl.split('/').pop()}
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleMigrateStockVideos}
+                        disabled={!projectId || !onScenesUpdate}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: 'linear-gradient(135deg, #3b82f620, #8b5cf620)',
+                          border: '2px solid #3b82f6',
+                          borderRadius: '8px',
+                          cursor: projectId && onScenesUpdate ? 'pointer' : 'not-allowed',
+                          opacity: projectId && onScenesUpdate ? 1 : 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#3b82f6' }}>
+                          Download & Save to Local Storage
+                        </span>
+                      </button>
+                    )}
+
+                    <p style={{
+                      fontSize: '10px',
+                      color: '#64748b',
+                      margin: '12px 0 0 0',
+                      textAlign: 'center'
+                    }}>
+                      Downloads stock videos to Supabase Storage for permanent access
+                    </p>
+                  </>
+                )}
+              </div>
+            </Section>
+          )}
         </div>
 
         {/* Footer */}

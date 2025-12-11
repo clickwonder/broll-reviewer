@@ -12,13 +12,16 @@ import { buildImagePrompt, buildVideoPrompt } from './services/brollService';
 import { generateBRoll, GenerationProgress, ImageModel as KieImageModel, VideoModel as KieVideoModel } from './services/kieService';
 import {
   DBProject,
+  DBBRollAsset,
   saveProject,
+  updateProject,
   getProjectAssets,
   saveAsset,
   updateAsset,
   saveAssetVersion,
   appAssetToDbFormat,
-  dbAssetToAppAsset
+  dbAssetToAppAsset,
+  transformDBScenesToSceneCutaways
 } from './services/databaseService';
 
 // Map types.ts model names (underscores) to kieService model names (hyphens)
@@ -124,6 +127,40 @@ const initialBRollAssets: BRollAsset[] = [
     usedInScenes: ['Scene 03', 'Scene 05'],
     createdAt: new Date().toISOString(),
     versions: []
+  },
+  // Stock videos
+  {
+    id: 'stock_courtroom',
+    filename: 'courtroom.mp4',
+    path: '/videos/stock/stock_pexels_6101348_1765420340756.mp4',
+    description: 'Stock video: Courtroom interior',
+    status: 'pending',
+    usedInScenes: ['Scene 08'],
+    source: 'pexels',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_calendar',
+    filename: 'calendar_deadlines.mp4',
+    path: '/videos/stock/stock_pexels_7924459_1765420340333.mp4',
+    description: 'Stock video: Calendar with deadlines',
+    status: 'pending',
+    usedInScenes: [],
+    source: 'pexels',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_credit_report',
+    filename: 'credit_report.mp4',
+    path: '/videos/stock/stock_pexels_8519382_1765420340903.mp4',
+    description: 'Stock video: Credit report document',
+    status: 'pending',
+    usedInScenes: [],
+    source: 'pexels',
+    createdAt: new Date().toISOString(),
+    versions: []
   }
 ];
 
@@ -184,8 +221,9 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Timeline editing handlers
-  const handleUpdateCutaway = (sceneId: string, cutawayIndex: number, updates: { startTime?: number; duration?: number }) => {
-    setSceneCutaways(prev => prev.map(scene => {
+  const handleUpdateCutaway = async (sceneId: string, cutawayIndex: number, updates: { startTime?: number; duration?: number }) => {
+    // Compute the new scenes array
+    const updatedScenes = sceneCutaways.map(scene => {
       if (scene.sceneId !== sceneId) return scene;
       return {
         ...scene,
@@ -198,64 +236,118 @@ function App() {
           };
         })
       };
-    }));
+    });
+
+    // Update local state
+    setSceneCutaways(updatedScenes);
     console.log(`[Timeline Edit] Updated cutaway ${cutawayIndex} in ${sceneId}:`, updates);
+
+    // Persist to database
+    if (currentProject) {
+      try {
+        await updateProject(currentProject.id, { scenes: updatedScenes });
+        console.log('[Timeline Edit] Scenes persisted to database');
+      } catch (error) {
+        console.error('[Timeline Edit] Failed to persist scenes:', error);
+      }
+    }
   };
 
-  const handleInsertCutaway = (sceneId: string, cutaway: CutawayConfig) => {
-    setSceneCutaways(prev => prev.map(scene => {
+  const handleInsertCutaway = async (sceneId: string, cutaway: CutawayConfig) => {
+    // Compute the new scenes array
+    const updatedScenes = sceneCutaways.map(scene => {
       if (scene.sceneId !== sceneId) return scene;
       return {
         ...scene,
         cutaways: [...scene.cutaways, cutaway].sort((a, b) => a.startTime - b.startTime)
       };
-    }));
+    });
+
+    // Update local state
+    setSceneCutaways(updatedScenes);
     console.log(`[Timeline Edit] Inserted cutaway in ${sceneId}:`, cutaway);
+
+    // Persist to database
+    if (currentProject) {
+      try {
+        await updateProject(currentProject.id, { scenes: updatedScenes });
+        console.log('[Timeline Edit] Scenes persisted to database');
+      } catch (error) {
+        console.error('[Timeline Edit] Failed to persist scenes:', error);
+      }
+    }
   };
 
-  const handleDeleteCutaway = (sceneId: string, cutawayIndex: number) => {
-    setSceneCutaways(prev => prev.map(scene => {
+  const handleDeleteCutaway = async (sceneId: string, cutawayIndex: number) => {
+    // Compute the new scenes array
+    const updatedScenes = sceneCutaways.map(scene => {
       if (scene.sceneId !== sceneId) return scene;
       return {
         ...scene,
         cutaways: scene.cutaways.filter((_, idx) => idx !== cutawayIndex)
       };
-    }));
+    });
+
+    // Update local state
+    setSceneCutaways(updatedScenes);
     console.log(`[Timeline Edit] Deleted cutaway ${cutawayIndex} from ${sceneId}`);
+
+    // Persist to database
+    if (currentProject) {
+      try {
+        await updateProject(currentProject.id, { scenes: updatedScenes });
+        console.log('[Timeline Edit] Scenes persisted to database');
+      } catch (error) {
+        console.error('[Timeline Edit] Failed to persist scenes:', error);
+      }
+    }
   };
 
-  // Load project assets when project is selected
+  // Load project assets and scenes when project is selected
   useEffect(() => {
-    if (currentProject) {
-      loadProjectAssets(currentProject.id);
+    const loadProjectData = async () => {
+      if (!currentProject) return;
+
       // Use project settings if available
       if (currentProject.settings) {
         setSettings(currentProject.settings);
       }
-    }
-  }, [currentProject?.id]);
 
-  const loadProjectAssets = async (projectId: string) => {
-    try {
-      const dbAssets = await getProjectAssets(projectId);
-      if (dbAssets.length > 0) {
-        // Convert DB assets to app format
-        setAssets(dbAssets.map(dbAssetToAppAsset));
-      } else {
-        // No assets yet - start with the initial demo assets
-        // and save them to the database
-        setAssets(initialBRollAssets);
-        // Save initial assets to database
-        for (const asset of initialBRollAssets) {
-          await saveAsset(projectId, appAssetToDbFormat(asset));
+      // Load assets first (needed for scene transformation)
+      let dbAssets: DBBRollAsset[] = [];
+      try {
+        dbAssets = await getProjectAssets(currentProject.id);
+        if (dbAssets.length > 0) {
+          setAssets(dbAssets.map(dbAssetToAppAsset));
+        } else {
+          setAssets(initialBRollAssets);
+          for (const asset of initialBRollAssets) {
+            await saveAsset(currentProject.id, appAssetToDbFormat(asset));
+          }
         }
+      } catch (error) {
+        console.error('Failed to load project assets:', error);
+        setAssets(initialBRollAssets);
       }
-    } catch (error) {
-      console.error('Failed to load project assets:', error);
-      // Fall back to demo assets
-      setAssets(initialBRollAssets);
-    }
-  };
+
+      // Load and transform scenes from project
+      if (currentProject.scenes && currentProject.scenes.length > 0) {
+        // Transform scenes from DB format to SceneCutaway format
+        const transformedScenes = transformDBScenesToSceneCutaways(
+          currentProject.scenes as unknown as Parameters<typeof transformDBScenesToSceneCutaways>[0],
+          dbAssets
+        );
+        setSceneCutaways(transformedScenes);
+        console.log('[Project Load] Loaded and transformed scenes from database:', transformedScenes.length);
+      } else {
+        // Fall back to initial scenes
+        setSceneCutaways(initialSceneCutaways);
+        console.log('[Project Load] Using initial scenes (no saved scenes in database)');
+      }
+    };
+
+    loadProjectData();
+  }, [currentProject?.id]);
 
   const handleSelectProject = (project: DBProject) => {
     setCurrentProject(project);
@@ -627,6 +719,9 @@ function App() {
             setShowSettingsModal(false);
             setShowStockBrowser(true);
           }}
+          scenes={sceneCutaways}
+          onScenesUpdate={setSceneCutaways}
+          projectId={currentProject?.id}
         />
       )}
 

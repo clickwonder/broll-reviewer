@@ -4,7 +4,7 @@
  */
 
 import { supabase, isSupabaseEnabled } from './supabaseClient';
-import type { BRollAsset, SceneCutaway, GenerationSettings } from '../types';
+import type { BRollAsset, SceneCutaway, CutawayConfig, GenerationSettings } from '../types';
 
 // Database types
 export interface DBProject {
@@ -323,6 +323,89 @@ export async function saveAssetVersion(
     console.error('Failed to save asset version:', updateError);
     throw new Error(`Failed to save asset version: ${updateError.message}`);
   }
+}
+
+// Raw database scene format (different from SceneCutaway)
+interface RawDBScene {
+  id: string;
+  name: string;
+  duration?: number;
+}
+
+// Transform raw DB scene format to SceneCutaway format
+// DB has: {id, name, duration}
+// App expects: {sceneId, sceneTitle, cutaways[]}
+export function transformDBScenesToSceneCutaways(
+  rawScenes: RawDBScene[] | SceneCutaway[] | undefined,
+  assets: DBBRollAsset[] = []
+): SceneCutaway[] {
+  if (!rawScenes || !Array.isArray(rawScenes)) {
+    return [];
+  }
+
+  return rawScenes.map((scene: RawDBScene | SceneCutaway, sceneIndex: number) => {
+    // Check if it's already in SceneCutaway format
+    if ('sceneId' in scene && 'cutaways' in scene) {
+      return scene as SceneCutaway;
+    }
+
+    // It's in raw DB format {id, name, duration}
+    const rawScene = scene as RawDBScene;
+
+    // Generate possible scene identifiers to match against used_in_scenes
+    // Assets might have used_in_scenes like ["Scene 01", "scene_01", "scene-01", "1", etc.]
+    const sceneNumber = sceneIndex + 1;
+    const paddedNumber = String(sceneNumber).padStart(2, '0');
+    const possibleMatchers = [
+      rawScene.id,                           // UUID or actual ID
+      rawScene.name,                         // Full scene name
+      `Scene ${paddedNumber}`,               // "Scene 01"
+      `Scene ${sceneNumber}`,                // "Scene 1"
+      `scene_${paddedNumber}`,               // "scene_01"
+      `scene_${sceneNumber}`,                // "scene_1"
+      `scene-${paddedNumber}`,               // "scene-01"
+      `scene-${sceneNumber}`,                // "scene-1"
+      String(sceneNumber),                   // "1"
+      paddedNumber,                          // "01"
+    ];
+
+    // Find assets that belong to this scene by checking multiple matching patterns
+    const sceneAssets = assets.filter(asset => {
+      if (!asset.used_in_scenes || !Array.isArray(asset.used_in_scenes)) {
+        return false;
+      }
+      // Check if any of the possible matchers are in the asset's used_in_scenes
+      return asset.used_in_scenes.some(usedScene =>
+        possibleMatchers.some(matcher =>
+          usedScene.toLowerCase() === matcher.toLowerCase() ||
+          usedScene.toLowerCase().includes(matcher.toLowerCase())
+        )
+      );
+    });
+
+    console.log(`[Scene Transform] Scene "${rawScene.name}" (index ${sceneIndex}): Found ${sceneAssets.length} matching assets`);
+    sceneAssets.forEach((asset, i) => {
+      console.log(`  Asset ${i+1}: ${asset.filename} -> ${asset.path} (source: ${asset.source})`);
+    });
+
+    // Create cutaways from assets
+    const cutaways: CutawayConfig[] = sceneAssets.map((asset, index) => ({
+      video: asset.path || asset.video_url || '',
+      startTime: index * 3, // Default spacing
+      duration: 3,
+      style: 'default',
+      videoStartTime: 0,
+      playbackRate: 1
+    }));
+
+    console.log(`  Created ${cutaways.length} cutaways:`, cutaways.map(c => c.video));
+
+    return {
+      sceneId: rawScene.id,
+      sceneTitle: rawScene.name,
+      cutaways
+    };
+  });
 }
 
 // Convert DB asset to app BRollAsset type

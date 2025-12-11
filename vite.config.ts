@@ -6,6 +6,10 @@ export default defineConfig({
   server: {
     port: 3001,
     open: true,
+    watch: {
+      usePolling: true,
+      interval: 100,
+    },
     proxy: {
       '/api/pexels': {
         target: 'https://api.pexels.com',

@@ -155,17 +155,25 @@ export const StockBrowser: React.FC<StockBrowserProps> = ({
 
     const data: PixabayResponse = await response.json();
 
-    const videos: StockVideo[] = data.hits.map(video => ({
-      id: `pixabay-${video.id}`,
-      thumbnail: `https://i.vimeocdn.com/video/${video.picture_id}_295x166.jpg`, // Pixabay uses picture_id for thumbnails
-      previewUrl: video.videos.tiny?.url || video.videos.small?.url || '',
-      downloadUrl: video.videos.large?.url || video.videos.medium?.url || '',
-      duration: video.duration,
-      width: video.videos.large?.width || video.videos.medium?.width || 1920,
-      height: video.videos.large?.height || video.videos.medium?.height || 1080,
-      source: 'pixabay' as StockSource,
-      author: video.user
-    }));
+    const videos: StockVideo[] = data.hits.map(video => {
+      // Pixabay video thumbnail URLs - try multiple formats for reliability
+      // Format: https://i.vimeocdn.com/video/{picture_id}_{size}.jpg
+      const thumbnailUrl = video.picture_id
+        ? `https://i.vimeocdn.com/video/${video.picture_id}_640x360.jpg`
+        : ''; // Will fallback to video preview if empty
+
+      return {
+        id: `pixabay-${video.id}`,
+        thumbnail: thumbnailUrl,
+        previewUrl: video.videos.tiny?.url || video.videos.small?.url || '',
+        downloadUrl: video.videos.large?.url || video.videos.medium?.url || '',
+        duration: video.duration,
+        width: video.videos.large?.width || video.videos.medium?.width || 1920,
+        height: video.videos.large?.height || video.videos.medium?.height || 1080,
+        source: 'pixabay' as StockSource,
+        author: video.user
+      };
+    });
 
     return { videos, total: data.totalHits };
   };
@@ -477,7 +485,7 @@ export const StockBrowser: React.FC<StockBrowserProps> = ({
                           objectFit: 'cover'
                         }}
                       />
-                    ) : (
+                    ) : video.thumbnail ? (
                       <>
                         <img
                           src={video.thumbnail}
@@ -488,29 +496,50 @@ export const StockBrowser: React.FC<StockBrowserProps> = ({
                             objectFit: 'cover'
                           }}
                           onError={(e) => {
-                            // Show fallback placeholder if thumbnail fails
+                            // Replace failed thumbnail with video poster
                             const img = e.target as HTMLImageElement;
                             img.style.display = 'none';
-                            const sibling = img.nextElementSibling as HTMLElement;
-                            if (sibling) sibling.style.display = 'flex';
+                            const fallback = img.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'block';
                           }}
                         />
-                        <div style={{
-                          display: 'none',
+                        {/* Video fallback when thumbnail fails - shows first frame */}
+                        <video
+                          src={video.previewUrl}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          style={{
+                            display: 'none',
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                          onLoadedMetadata={(e) => {
+                            // Seek to 0.5 second to show a meaningful frame
+                            const vid = e.target as HTMLVideoElement;
+                            vid.currentTime = 0.5;
+                          }}
+                        />
+                      </>
+                    ) : (
+                      // No thumbnail URL - show video directly as poster
+                      <video
+                        src={video.previewUrl}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        style={{
                           width: '100%',
                           height: '100%',
-                          background: 'linear-gradient(135deg, #334155, #1e293b)',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexDirection: 'column',
-                          gap: '8px'
-                        }}>
-                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.5">
-                            <polygon points="5 3 19 12 5 21 5 3" />
-                          </svg>
-                          <span style={{ fontSize: '11px', color: '#64748b' }}>Hover to preview</span>
-                        </div>
-                      </>
+                          objectFit: 'cover'
+                        }}
+                        onLoadedMetadata={(e) => {
+                          // Seek to 0.5 second to show a meaningful frame
+                          const vid = e.target as HTMLVideoElement;
+                          vid.currentTime = 0.5;
+                        }}
+                      />
                     )}
 
                     {/* Duration badge */}

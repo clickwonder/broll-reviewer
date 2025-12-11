@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { BRollAsset, SceneCutaway, CutawayConfig } from '../types';
+import { BRollAsset, SceneCutaway, CutawayConfig, StockSource } from '../types';
+import { StockBrowser } from './StockBrowser';
+import { generateBRoll, ImageModel, VideoModel, GenerationProgress } from '../services/kieService';
+import { downloadAndSaveStockVideo, StockVideoInfo, DownloadProgress } from '../services/stockStorageService';
 
 interface CutawayUpdate {
   startTime?: number;
@@ -28,15 +31,26 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
   onDeleteCutaway
 }) => {
   const getAssetFromPath = (path: string): BRollAsset | undefined => {
-    const filename = path.split('/').pop(); // e.g., "worried_bills.mp4"
-    return assets.find(a => a.filename === filename);
+    // Try to match by full path first
+    let asset = assets.find(a => a.path === path || a.videoUrl === path);
+    if (asset) return asset;
+
+    // Try to match by filename as fallback
+    const filename = path.split('/').pop();
+    asset = assets.find(a =>
+      a.filename === filename ||
+      a.path?.split('/').pop() === filename ||
+      a.videoUrl?.split('/').pop() === filename
+    );
+    return asset;
   };
 
   // Calculate cumulative timeline
   let cumulativeTime = 0;
-  const scenesWithTime = scenes.map(scene => {
+  const scenesWithTime = (scenes || []).map(scene => {
+    const cutaways = scene.cutaways || [];
     const sceneDuration = Math.max(
-      ...scene.cutaways.map(c => c.startTime + c.duration),
+      ...(cutaways.length > 0 ? cutaways.map(c => c.startTime + c.duration) : [0]),
       15 // minimum scene duration
     );
     const sceneStart = cumulativeTime;
@@ -134,7 +148,7 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {scenesWithTime.map((scene, sceneIndex) => (
             <SceneBlock
-              key={scene.sceneId}
+              key={scene.sceneId || `scene-${sceneIndex}`}
               scene={scene}
               sceneIndex={sceneIndex}
               assets={assets}
@@ -370,7 +384,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
           // Check if we're in a cutaway
           const sceneLocalTime = time - scene.sceneStart;
           let foundCutaway = false;
-          for (const cutaway of scene.cutaways) {
+          for (const cutaway of (scene.cutaways || [])) {
             if (sceneLocalTime >= cutaway.startTime && sceneLocalTime < cutaway.startTime + cutaway.duration) {
               setActiveCutaway(cutaway.video);
               // Get the actual asset for this cutaway
@@ -449,7 +463,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
   // Get all cutaways with absolute times for the timeline
   const allCutaways = scenes.flatMap(scene =>
-    scene.cutaways.map((cutaway, cutawayIdx) => ({
+    (scene.cutaways || []).map((cutaway, cutawayIdx) => ({
       ...cutaway,
       absoluteStart: scene.sceneStart + cutaway.startTime,
       sceneId: scene.sceneId,
@@ -755,7 +769,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
               }}>
                 {scenes.map((scene, idx) => (
                   <div
-                    key={scene.sceneId}
+                    key={scene.sceneId || `scene-marker-${idx}`}
                     onClick={() => seekTo(scene.sceneStart)}
                     style={{
                       position: 'absolute',
@@ -818,7 +832,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
                   return (
                     <div
-                      key={`${cutaway.sceneId}-${idx}`}
+                      key={`${cutaway.sceneId || 'cutaway'}-${cutaway.cutawayIndex}-${idx}`}
                       style={{
                         position: 'absolute',
                         left: `${(displayStart / totalDuration) * 100}%`,
@@ -1022,7 +1036,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                   </div>
 
                   {activeCutaway && (() => {
-                    const cutaway = scene.cutaways.find(c => c.video === activeCutaway);
+                    const cutaway = (scene.cutaways || []).find(c => c.video === activeCutaway);
                     const asset = getAssetFromPath(activeCutaway);
                     if (!cutaway) return null;
 
@@ -1198,6 +1212,19 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
   const [showInsertModal, setShowInsertModal] = useState(false);
   const [insertTime, setInsertTime] = useState(0);
   const [selectedAssetForInsert, setSelectedAssetForInsert] = useState<string>('');
+  const [insertMode, setInsertMode] = useState<'existing' | 'stock' | 'generate'>('existing');
+  const [showStockBrowser, setShowStockBrowser] = useState(false);
+  const [stockSource, setStockSource] = useState<StockSource>('pexels');
+  // AI Generation state
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiStyle, setAiStyle] = useState<'cinematic' | 'realistic' | 'documentary'>('cinematic');
+  const [aiImageModel, setAiImageModel] = useState<ImageModel>('imagen4-fast');
+  const [aiVideoModel, setAiVideoModel] = useState<VideoModel>('sora-2');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiProgress, setAiProgress] = useState<GenerationProgress | null>(null);
+  // Stock download state
+  const [stockDownloading, setStockDownloading] = useState(false);
+  const [stockDownloadProgress, setStockDownloadProgress] = useState<DownloadProgress | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [previewUpdate, setPreviewUpdate] = useState<{ index: number; startTime: number; duration: number } | null>(null);
@@ -1274,7 +1301,9 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
   const startDrag = (e: React.MouseEvent, cutawayIndex: number, operation: DragOperation) => {
     e.preventDefault();
     e.stopPropagation();
-    const cutaway = scene.cutaways[cutawayIndex];
+    const cutaways = scene.cutaways || [];
+    const cutaway = cutaways[cutawayIndex];
+    if (!cutaway) return;
     setDragState({
       cutawayIndex,
       operation,
@@ -1293,7 +1322,7 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
     const clickTime = pixelToTime(clickX);
 
     // Check if we clicked on an existing cutaway
-    for (const cutaway of scene.cutaways) {
+    for (const cutaway of (scene.cutaways || [])) {
       if (clickTime >= cutaway.startTime && clickTime <= cutaway.startTime + cutaway.duration) {
         return; // Clicked on existing cutaway, don't show insert modal
       }
@@ -1317,15 +1346,163 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
     }
     setShowInsertModal(false);
     setSelectedAssetForInsert('');
+    setInsertMode('existing');
+  };
+
+  // Handle stock video selection - downloads and saves to permanent storage
+  const handleStockVideoSelect = async (video: {
+    id: string;
+    downloadUrl: string;
+    previewUrl?: string;
+    duration: number;
+    source: StockSource;
+    author?: string;
+  }) => {
+    if (!onInsertCutaway) return;
+
+    // Only download if source is pexels or pixabay
+    const isStockVideo = video.source === 'pexels' || video.source === 'pixabay';
+
+    if (!isStockVideo) {
+      // Non-stock video - just insert directly
+      onInsertCutaway(scene.sceneId, {
+        video: video.downloadUrl,
+        startTime: insertTime,
+        duration: Math.min(video.duration, scene.sceneDuration - insertTime, 5),
+        style: 'standard',
+        videoStartTime: 0,
+        playbackRate: 1.0
+      });
+      setShowStockBrowser(false);
+      setShowInsertModal(false);
+      setInsertMode('existing');
+      return;
+    }
+
+    setStockDownloading(true);
+    setStockDownloadProgress({ loaded: 0, total: 0, percent: 0 });
+
+    try {
+      // Download and save to Supabase Storage
+      const videoInfo: StockVideoInfo = {
+        id: video.id,
+        downloadUrl: video.downloadUrl,
+        previewUrl: video.previewUrl,
+        duration: video.duration,
+        source: video.source as 'pexels' | 'pixabay',
+        author: video.author,
+      };
+
+      const result = await downloadAndSaveStockVideo(
+        videoInfo,
+        'broll-reviewer', // Default project ID
+        (progress) => setStockDownloadProgress(progress)
+      );
+
+      // Use the permanent URL (or fallback to original if storage unavailable)
+      const videoUrl = result.success && result.localUrl ? result.localUrl : video.downloadUrl;
+
+      onInsertCutaway(scene.sceneId, {
+        video: videoUrl,
+        startTime: insertTime,
+        duration: Math.min(video.duration, scene.sceneDuration - insertTime, 5), // Cap at 5s or remaining scene time
+        style: 'standard',
+        videoStartTime: 0,
+        playbackRate: 1.0
+      });
+
+      setShowStockBrowser(false);
+      setShowInsertModal(false);
+      setInsertMode('existing');
+    } catch (error) {
+      console.error('Failed to download stock video:', error);
+      // Fallback: use original URL
+      onInsertCutaway(scene.sceneId, {
+        video: video.downloadUrl,
+        startTime: insertTime,
+        duration: Math.min(video.duration, scene.sceneDuration - insertTime, 5),
+        style: 'standard',
+        videoStartTime: 0,
+        playbackRate: 1.0
+      });
+      setShowStockBrowser(false);
+      setShowInsertModal(false);
+      setInsertMode('existing');
+    } finally {
+      setStockDownloading(false);
+      setStockDownloadProgress(null);
+    }
+  };
+
+  // Handle AI B-Roll generation
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim() || aiGenerating) return;
+
+    setAiGenerating(true);
+    setAiProgress({ stage: 'image', message: 'Starting generation...' });
+
+    try {
+      const result = await generateBRoll(
+        aiPrompt,
+        aiStyle,
+        aiImageModel,
+        aiVideoModel,
+        (progress) => setAiProgress(progress)
+      );
+
+      // Insert the generated video as a cutaway
+      if (onInsertCutaway && result.videoUrl) {
+        onInsertCutaway(scene.sceneId, {
+          video: result.videoUrl,
+          startTime: insertTime,
+          duration: Math.min(5, scene.sceneDuration - insertTime), // Default 5s duration
+          style: 'standard',
+          videoStartTime: 0,
+          playbackRate: 1.0
+        });
+      }
+
+      // Close modal and reset
+      setShowInsertModal(false);
+      setInsertMode('existing');
+      setAiPrompt('');
+      setAiProgress(null);
+    } catch (error) {
+      console.error('AI generation failed:', error);
+      setAiProgress({
+        stage: 'error',
+        message: error instanceof Error ? error.message : 'Generation failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Reset AI state when closing modal
+  const handleCloseInsertModal = () => {
+    setShowInsertModal(false);
+    setInsertMode('existing');
+    setSelectedAssetForInsert('');
+    setAiPrompt('');
+    setAiProgress(null);
+    setAiGenerating(false);
   };
 
   return (
-    <div style={{
-      background: '#1e293b',
-      borderRadius: '12px',
-      overflow: 'hidden',
-      border: '1px solid #334155'
-    }}>
+    <>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+      <div style={{
+        background: '#1e293b',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        border: '1px solid #334155'
+      }}>
       {/* Scene Header */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}
@@ -1378,7 +1555,7 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
           fontSize: '12px',
           color: '#e2e8f0'
         }}>
-          {scene.cutaways.length} cutaway{scene.cutaways.length !== 1 ? 's' : ''}
+          {(scene.cutaways || []).length} cutaway{(scene.cutaways || []).length !== 1 ? 's' : ''}
         </div>
         <svg
           width="20"
@@ -1451,7 +1628,7 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
             )}
 
             {/* Cutaway bars - Interactive */}
-            {scene.cutaways.map((cutaway, idx) => {
+            {(scene.cutaways || []).map((cutaway, idx) => {
               const asset = getAssetFromPath(cutaway.video);
               const statusColor = asset ? {
                 approved: '#22c55e',
@@ -1623,61 +1800,599 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
               <div style={{
                 background: '#1e293b',
                 borderRadius: '12px',
-                padding: '24px',
-                width: '400px',
+                width: '520px',
                 maxWidth: '90vw',
-                border: '1px solid #334155'
+                border: '1px solid #334155',
+                overflow: 'hidden'
               }}>
-                <h3 style={{
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  color: '#f1f5f9',
-                  margin: '0 0 16px 0'
+                {/* Header */}
+                <div style={{
+                  padding: '16px 24px',
+                  borderBottom: '1px solid #334155',
+                  background: '#0f172a'
                 }}>
-                  Insert B-Roll at {insertTime.toFixed(1)}s
-                </h3>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '12px',
-                    color: '#94a3b8',
-                    marginBottom: '8px'
+                  <h3 style={{
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: '#f1f5f9',
+                    margin: 0
                   }}>
-                    Select B-Roll Asset
-                  </label>
-                  <select
-                    value={selectedAssetForInsert}
-                    onChange={(e) => setSelectedAssetForInsert(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: '#0f172a',
-                      border: '1px solid #334155',
-                      borderRadius: '6px',
-                      color: '#f1f5f9',
-                      fontSize: '14px'
-                    }}
-                  >
-                    <option value="">Choose an asset...</option>
-                    {_assets.map(asset => (
-                      <option key={asset.id} value={asset.path}>
-                        {asset.filename} - {asset.description}
-                      </option>
-                    ))}
-                  </select>
+                    Insert B-Roll at {insertTime.toFixed(1)}s
+                  </h3>
+                  <p style={{
+                    fontSize: '12px',
+                    color: '#64748b',
+                    margin: '4px 0 0 0'
+                  }}>
+                    Scene {sceneIndex + 1}: {scene.sceneId}
+                  </p>
                 </div>
 
+                {/* Tab Buttons */}
                 <div style={{
+                  display: 'flex',
+                  borderBottom: '1px solid #334155'
+                }}>
+                  <button
+                    onClick={() => setInsertMode('existing')}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      background: insertMode === 'existing' ? '#1e293b' : 'transparent',
+                      border: 'none',
+                      borderBottom: insertMode === 'existing' ? '2px solid #3b82f6' : '2px solid transparent',
+                      color: insertMode === 'existing' ? '#f1f5f9' : '#64748b',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                    Existing Assets ({_assets.length})
+                  </button>
+                  <button
+                    onClick={() => setInsertMode('stock')}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      background: insertMode === 'stock' ? '#1e293b' : 'transparent',
+                      border: 'none',
+                      borderBottom: insertMode === 'stock' ? '2px solid #22c55e' : '2px solid transparent',
+                      color: insertMode === 'stock' ? '#f1f5f9' : '#64748b',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    Find New Stock
+                  </button>
+                  <button
+                    onClick={() => setInsertMode('generate')}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      background: insertMode === 'generate' ? '#1e293b' : 'transparent',
+                      border: 'none',
+                      borderBottom: insertMode === 'generate' ? '2px solid #a855f7' : '2px solid transparent',
+                      color: insertMode === 'generate' ? '#f1f5f9' : '#64748b',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                      <path d="M2 17l10 5 10-5" />
+                      <path d="M2 12l10 5 10-5" />
+                    </svg>
+                    Generate with AI
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div style={{ padding: '20px 24px' }}>
+                  {insertMode === 'existing' ? (
+                    // Existing Assets Tab
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        color: '#94a3b8',
+                        marginBottom: '8px'
+                      }}>
+                        Select from project B-Roll assets
+                      </label>
+                      <select
+                        value={selectedAssetForInsert}
+                        onChange={(e) => setSelectedAssetForInsert(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          color: '#f1f5f9',
+                          fontSize: '14px'
+                        }}
+                      >
+                        <option value="">Choose an asset...</option>
+                        {_assets.map(asset => (
+                          <option key={asset.id} value={asset.path}>
+                            {asset.filename} - {asset.description}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Asset Preview */}
+                      {selectedAssetForInsert && (
+                        <div style={{
+                          marginTop: '16px',
+                          padding: '12px',
+                          background: '#0f172a',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          gap: '12px',
+                          alignItems: 'center'
+                        }}>
+                          <video
+                            src={selectedAssetForInsert}
+                            style={{
+                              width: '100px',
+                              height: '56px',
+                              objectFit: 'cover',
+                              borderRadius: '4px'
+                            }}
+                            muted
+                            autoPlay
+                            loop
+                            playsInline
+                          />
+                          <div style={{ flex: 1 }}>
+                            <p style={{
+                              fontSize: '13px',
+                              color: '#f1f5f9',
+                              margin: 0
+                            }}>
+                              {selectedAssetForInsert.split('/').pop()}
+                            </p>
+                            <p style={{
+                              fontSize: '11px',
+                              color: '#64748b',
+                              margin: '4px 0 0 0'
+                            }}>
+                              Will be inserted at {insertTime.toFixed(1)}s with 3s duration
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : insertMode === 'stock' ? (
+                    // Find New Stock Tab
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        color: '#94a3b8',
+                        marginBottom: '12px'
+                      }}>
+                        Search free stock video libraries
+                      </label>
+
+                      {/* Stock Source Selection */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '12px',
+                        marginBottom: '16px'
+                      }}>
+                        <button
+                          onClick={() => setStockSource('pexels')}
+                          style={{
+                            padding: '16px',
+                            background: stockSource === 'pexels' ? '#05a08115' : '#0f172a',
+                            border: `2px solid ${stockSource === 'pexels' ? '#05a081' : '#334155'}`,
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            textAlign: 'center'
+                          }}
+                        >
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '8px',
+                            background: stockSource === 'pexels' ? '#05a08120' : '#1e293b',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 8px',
+                            color: stockSource === 'pexels' ? '#05a081' : '#64748b'
+                          }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                          </div>
+                          <p style={{
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: stockSource === 'pexels' ? '#05a081' : '#e2e8f0',
+                            margin: '0 0 4px 0'
+                          }}>
+                            Pexels
+                          </p>
+                          <p style={{
+                            fontSize: '11px',
+                            color: '#64748b',
+                            margin: 0
+                          }}>
+                            HD/4K stock videos
+                          </p>
+                        </button>
+
+                        <button
+                          onClick={() => setStockSource('pixabay')}
+                          style={{
+                            padding: '16px',
+                            background: stockSource === 'pixabay' ? '#00ab6c15' : '#0f172a',
+                            border: `2px solid ${stockSource === 'pixabay' ? '#00ab6c' : '#334155'}`,
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            textAlign: 'center'
+                          }}
+                        >
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '8px',
+                            background: stockSource === 'pixabay' ? '#00ab6c20' : '#1e293b',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 8px',
+                            color: stockSource === 'pixabay' ? '#00ab6c' : '#64748b'
+                          }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                              <circle cx="12" cy="12" r="10"/>
+                            </svg>
+                          </div>
+                          <p style={{
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: stockSource === 'pixabay' ? '#00ab6c' : '#e2e8f0',
+                            margin: '0 0 4px 0'
+                          }}>
+                            Pixabay
+                          </p>
+                          <p style={{
+                            fontSize: '11px',
+                            color: '#64748b',
+                            margin: 0
+                          }}>
+                            Free stock footage
+                          </p>
+                        </button>
+                      </div>
+
+                      {/* Open Browser Button */}
+                      <button
+                        onClick={() => setShowStockBrowser(true)}
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          background: stockSource === 'pexels' ? '#05a081' : '#00ab6c',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="11" cy="11" r="8" />
+                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        Browse {stockSource === 'pexels' ? 'Pexels' : 'Pixabay'} Videos
+                      </button>
+
+                      <p style={{
+                        fontSize: '11px',
+                        color: '#64748b',
+                        margin: '12px 0 0 0',
+                        textAlign: 'center'
+                      }}>
+                        Free to use. No attribution required.
+                      </p>
+                    </div>
+                  ) : (
+                    // Generate with AI Tab
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        color: '#94a3b8',
+                        marginBottom: '8px'
+                      }}>
+                        Describe the B-Roll you want to generate
+                      </label>
+                      <textarea
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        placeholder="e.g., Professional business meeting in a modern office with natural lighting..."
+                        disabled={aiGenerating}
+                        style={{
+                          width: '100%',
+                          height: '80px',
+                          padding: '10px 12px',
+                          background: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          color: '#f1f5f9',
+                          fontSize: '14px',
+                          resize: 'none',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+
+                      {/* Style Selection */}
+                      <div style={{ marginTop: '16px' }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '12px',
+                          color: '#94a3b8',
+                          marginBottom: '8px'
+                        }}>
+                          Visual Style
+                        </label>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr 1fr',
+                          gap: '8px'
+                        }}>
+                          {(['cinematic', 'realistic', 'documentary'] as const).map(style => (
+                            <button
+                              key={style}
+                              onClick={() => setAiStyle(style)}
+                              disabled={aiGenerating}
+                              style={{
+                                padding: '10px',
+                                background: aiStyle === style ? '#a855f720' : '#0f172a',
+                                border: `1px solid ${aiStyle === style ? '#a855f7' : '#334155'}`,
+                                borderRadius: '6px',
+                                color: aiStyle === style ? '#a855f7' : '#94a3b8',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                cursor: aiGenerating ? 'not-allowed' : 'pointer',
+                                textTransform: 'capitalize'
+                              }}
+                            >
+                              {style}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Model Selection */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '12px',
+                        marginTop: '16px'
+                      }}>
+                        <div>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '12px',
+                            color: '#94a3b8',
+                            marginBottom: '6px'
+                          }}>
+                            Image Model
+                          </label>
+                          <select
+                            value={aiImageModel}
+                            onChange={(e) => setAiImageModel(e.target.value as ImageModel)}
+                            disabled={aiGenerating}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              background: '#0f172a',
+                              border: '1px solid #334155',
+                              borderRadius: '6px',
+                              color: '#f1f5f9',
+                              fontSize: '13px'
+                            }}
+                          >
+                            <option value="imagen4-fast">Imagen 4 Fast</option>
+                            <option value="imagen4">Imagen 4</option>
+                            <option value="nano-banana">Nano Banana</option>
+                            <option value="ideogram-v3">Ideogram V3</option>
+                            <option value="seedream">Seedream</option>
+                            <option value="gpt-4o">GPT-4o</option>
+                            <option value="flux-kontext">Flux Kontext</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '12px',
+                            color: '#94a3b8',
+                            marginBottom: '6px'
+                          }}>
+                            Video Model
+                          </label>
+                          <select
+                            value={aiVideoModel}
+                            onChange={(e) => setAiVideoModel(e.target.value as VideoModel)}
+                            disabled={aiGenerating}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              background: '#0f172a',
+                              border: '1px solid #334155',
+                              borderRadius: '6px',
+                              color: '#f1f5f9',
+                              fontSize: '13px'
+                            }}
+                          >
+                            <option value="sora-2">Sora 2</option>
+                            <option value="seedance">Seedance</option>
+                            <option value="hailuo">Hailuo</option>
+                            <option value="veo3">Veo 3</option>
+                            <option value="grok">Grok</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Progress Display */}
+                      {aiProgress && (
+                        <div style={{
+                          marginTop: '16px',
+                          padding: '12px',
+                          background: aiProgress.stage === 'error' ? '#dc262620' : '#a855f710',
+                          border: `1px solid ${aiProgress.stage === 'error' ? '#dc2626' : '#a855f750'}`,
+                          borderRadius: '8px'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px'
+                          }}>
+                            {aiProgress.stage !== 'error' && aiProgress.stage !== 'complete' && (
+                              <div style={{
+                                width: '16px',
+                                height: '16px',
+                                border: '2px solid #a855f7',
+                                borderTopColor: 'transparent',
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite'
+                              }} />
+                            )}
+                            {aiProgress.stage === 'complete' && (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            )}
+                            {aiProgress.stage === 'error' && (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="15" y1="9" x2="9" y2="15" />
+                                <line x1="9" y1="9" x2="15" y2="15" />
+                              </svg>
+                            )}
+                            <span style={{
+                              fontSize: '13px',
+                              color: aiProgress.stage === 'error' ? '#dc2626' : '#e2e8f0'
+                            }}>
+                              {aiProgress.message}
+                            </span>
+                          </div>
+                          {aiProgress.imageUrl && (
+                            <div style={{ marginTop: '10px' }}>
+                              <img
+                                src={aiProgress.imageUrl}
+                                alt="Generated"
+                                style={{
+                                  width: '100%',
+                                  height: '100px',
+                                  objectFit: 'cover',
+                                  borderRadius: '4px'
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Generate Button */}
+                      <button
+                        onClick={handleAiGenerate}
+                        disabled={!aiPrompt.trim() || aiGenerating}
+                        style={{
+                          width: '100%',
+                          marginTop: '16px',
+                          padding: '14px',
+                          background: (!aiPrompt.trim() || aiGenerating) ? '#334155' : 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          cursor: (!aiPrompt.trim() || aiGenerating) ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        {aiGenerating ? (
+                          <>
+                            <div style={{
+                              width: '16px',
+                              height: '16px',
+                              border: '2px solid #fff',
+                              borderTopColor: 'transparent',
+                              borderRadius: '50%',
+                              animation: 'spin 1s linear infinite'
+                            }} />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                              <path d="M2 17l10 5 10-5" />
+                              <path d="M2 12l10 5 10-5" />
+                            </svg>
+                            Generate B-Roll
+                          </>
+                        )}
+                      </button>
+
+                      <p style={{
+                        fontSize: '11px',
+                        color: '#64748b',
+                        margin: '12px 0 0 0',
+                        textAlign: 'center'
+                      }}>
+                        Uses AI to generate image, then converts to video (~2-5 min)
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                  padding: '16px 24px',
+                  borderTop: '1px solid #334155',
+                  background: '#0f172a',
                   display: 'flex',
                   gap: '12px',
                   justifyContent: 'flex-end'
                 }}>
                   <button
-                    onClick={() => {
-                      setShowInsertModal(false);
-                      setSelectedAssetForInsert('');
-                    }}
+                    onClick={handleCloseInsertModal}
                     style={{
                       padding: '10px 20px',
                       background: 'transparent',
@@ -1690,22 +2405,101 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
                   >
                     Cancel
                   </button>
-                  <button
-                    onClick={handleInsert}
-                    disabled={!selectedAssetForInsert}
-                    style={{
-                      padding: '10px 20px',
-                      background: selectedAssetForInsert ? '#22c55e' : '#334155',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: '#fff',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      cursor: selectedAssetForInsert ? 'pointer' : 'not-allowed'
-                    }}
-                  >
-                    Insert B-Roll
-                  </button>
+                  {insertMode === 'existing' && (
+                    <button
+                      onClick={handleInsert}
+                      disabled={!selectedAssetForInsert}
+                      style={{
+                        padding: '10px 20px',
+                        background: selectedAssetForInsert ? '#22c55e' : '#334155',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: '#fff',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        cursor: selectedAssetForInsert ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      Insert B-Roll
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stock Browser Modal */}
+          {showStockBrowser && (
+            <StockBrowser
+              source={stockSource}
+              onSelect={handleStockVideoSelect}
+              onClose={() => setShowStockBrowser(false)}
+              initialQuery=""
+            />
+          )}
+
+          {/* Stock Download Progress Overlay */}
+          {stockDownloading && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+            }}>
+              <div style={{
+                background: '#1e293b',
+                borderRadius: '12px',
+                padding: '32px',
+                textAlign: 'center',
+                minWidth: '300px',
+              }}>
+                <div style={{
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  color: '#f1f5f9',
+                  marginBottom: '16px',
+                }}>
+                  Downloading Stock Video...
+                </div>
+                <div style={{
+                  width: '100%',
+                  height: '8px',
+                  background: '#334155',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  marginBottom: '12px',
+                }}>
+                  <div style={{
+                    width: `${stockDownloadProgress?.percent || 0}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease',
+                  }} />
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  color: '#94a3b8',
+                }}>
+                  {stockDownloadProgress?.percent || 0}% complete
+                  {stockDownloadProgress && stockDownloadProgress.total > 0 && (
+                    <span style={{ marginLeft: '8px' }}>
+                      ({(stockDownloadProgress.loaded / 1024 / 1024).toFixed(1)} / {(stockDownloadProgress.total / 1024 / 1024).toFixed(1)} MB)
+                    </span>
+                  )}
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  color: '#64748b',
+                  marginTop: '8px',
+                }}>
+                  Saving to permanent storage...
                 </div>
               </div>
             </div>
@@ -1713,7 +2507,7 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
 
           {/* Cutaway Details */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {scene.cutaways.map((cutaway, idx) => {
+            {(scene.cutaways || []).map((cutaway, idx) => {
               const asset = getAssetFromPath(cutaway.video);
               return (
                 <CutawayDetail
@@ -1731,6 +2525,7 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
         </div>
       )}
     </div>
+    </>
   );
 };
 
@@ -1754,12 +2549,19 @@ const CutawayDetail: React.FC<CutawayDetailProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const statusColors = asset ? {
+  // Check if this is an external URL (stock video or AI-generated)
+  const isExternalUrl = cutaway.video.startsWith('http://') || cutaway.video.startsWith('https://');
+  // Use the external URL directly, or fall back to asset.path
+  const videoSrc = isExternalUrl ? cutaway.video : asset?.path;
+  // For external URLs without assets, we treat them as "pending" status
+  const isExternalOnly = isExternalUrl && !asset;
+
+  const statusColors = (asset || isExternalOnly) ? {
     approved: '#22c55e',
     pending: '#f59e0b',
     rejected: '#ef4444',
     regenerating: '#8b5cf6'
-  }[asset.status] : '#475569';
+  }[asset?.status || 'pending'] : '#475569';
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -1795,11 +2597,11 @@ const CutawayDetail: React.FC<CutawayDetailProps> = ({
         }}
         onClick={togglePlay}
       >
-        {asset ? (
+        {videoSrc ? (
           <>
             <video
               ref={videoRef}
-              src={asset.path}
+              src={videoSrc}
               style={{
                 width: '100%',
                 height: '100%',
@@ -1808,8 +2610,9 @@ const CutawayDetail: React.FC<CutawayDetailProps> = ({
               muted
               loop
               playsInline
+              crossOrigin="anonymous"
             />
-            {!isPlaying && asset.status !== 'regenerating' && (
+            {!isPlaying && asset?.status !== 'regenerating' && (
               <div style={{
                 position: 'absolute',
                 inset: 0,
@@ -1834,7 +2637,7 @@ const CutawayDetail: React.FC<CutawayDetailProps> = ({
               </div>
             )}
             {/* Regenerating spinner overlay */}
-            {asset.status === 'regenerating' && (
+            {asset?.status === 'regenerating' && (
               <div style={{
                 position: 'absolute',
                 inset: 0,
@@ -1901,7 +2704,7 @@ const CutawayDetail: React.FC<CutawayDetailProps> = ({
           }}>
             B-ROLL {index + 1}
           </span>
-          {asset && (
+          {(asset || isExternalOnly) && (
             <span style={{
               padding: '2px 8px',
               background: `${statusColors}20`,
@@ -1911,7 +2714,7 @@ const CutawayDetail: React.FC<CutawayDetailProps> = ({
               color: statusColors,
               textTransform: 'uppercase'
             }}>
-              {asset.status}
+              {asset?.status || (isExternalOnly ? 'stock' : 'pending')}
             </span>
           )}
         </div>
