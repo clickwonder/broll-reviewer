@@ -30,6 +30,9 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
   onInsertCutaway,
   onDeleteCutaway
 }) => {
+  // State to trigger insert modal from main timeline
+  const [triggerInsertModal, setTriggerInsertModal] = useState<{ sceneId: string; time: number } | null>(null);
+
   const getAssetFromPath = (path: string): BRollAsset | undefined => {
     console.log(`[VerticalTimeline getAssetFromPath] Looking for path: ${path}`);
 
@@ -87,7 +90,7 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
         getAssetFromPath={getAssetFromPath}
         assets={assets}
         onUpdateCutaway={onUpdateCutaway}
-        onInsertCutaway={onInsertCutaway}
+        onTimelineClick={(sceneId, time) => setTriggerInsertModal({ sceneId, time })}
       />
 
       <div style={{
@@ -179,6 +182,8 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
               onUpdateCutaway={onUpdateCutaway}
               onInsertCutaway={onInsertCutaway}
               onDeleteCutaway={onDeleteCutaway}
+              triggerInsertModal={triggerInsertModal}
+              onClearTrigger={() => setTriggerInsertModal(null)}
             />
           ))}
         </div>
@@ -207,7 +212,7 @@ interface FullVideoPreviewProps {
   getAssetFromPath: (path: string) => BRollAsset | undefined;
   assets: BRollAsset[]; // Added to trigger re-renders on asset changes
   onUpdateCutaway?: (sceneId: string, cutawayIndex: number, updates: CutawayUpdate) => void;
-  onInsertCutaway?: (sceneId: string, cutaway: CutawayConfig) => void;
+  onTimelineClick?: (sceneId: string, time: number) => void; // Trigger insert modal for a scene
 }
 
 // Drag operation types for full timeline
@@ -228,7 +233,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   getAssetFromPath,
   assets,
   onUpdateCutaway,
-  onInsertCutaway
+  onTimelineClick
 }) => {
   const baseVideoRef = useRef<HTMLVideoElement>(null);
   const cutawayVideoRef = useRef<HTMLVideoElement>(null);
@@ -830,7 +835,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                 }}
                 onClick={(e) => {
                   // Only handle clicks on the timeline background, not on cutaway bars
-                  if (e.target === e.currentTarget && onInsertCutaway) {
+                  if (e.target === e.currentTarget && onTimelineClick) {
                     const rect = cutawayTimelineRef.current?.getBoundingClientRect();
                     if (!rect) return;
 
@@ -848,33 +853,14 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                       // Calculate scene-relative start time
                       const startTime = clickedTime - scene.sceneStart;
 
-                      // Show prompt for video URL or scroll to scene
-                      const sceneNumber = scenes.indexOf(scene) + 1;
-                      const message = `Insert B-roll at ${startTime.toFixed(1)}s in Scene ${sceneNumber}?\n\n` +
-                        `Options:\n` +
-                        `1. Enter a video URL/path below\n` +
-                        `2. Click Cancel and use Scene ${sceneNumber}'s Insert button for more options (stock videos, AI generation)`;
+                      console.log(`[Timeline Click] Triggering insert modal for ${scene.sceneId} at ${startTime.toFixed(1)}s`);
 
-                      const videoUrl = prompt(message);
-
-                      if (videoUrl && videoUrl.trim()) {
-                        // Create cutaway with the provided URL
-                        const newCutaway: CutawayConfig = {
-                          video: videoUrl.trim(),
-                          startTime: Math.max(0, Math.round(startTime * 10) / 10),
-                          duration: 3, // Default 3 seconds
-                          style: 'default',
-                          videoStartTime: 0,
-                          playbackRate: 1
-                        };
-
-                        console.log(`[Timeline Click] Inserting cutaway in ${scene.sceneId} at ${startTime.toFixed(1)}s with video: ${videoUrl}`);
-                        onInsertCutaway(scene.sceneId, newCutaway);
-                      }
+                      // Trigger the insert modal for this scene
+                      onTimelineClick(scene.sceneId, Math.max(0, Math.round(startTime * 10) / 10));
                     }
                   }
                 }}
-                title="Click on empty timeline area to see where to insert B-roll"
+                title="Click on empty timeline area to insert B-roll"
               >
                 {allCutaways.map((cutaway, idx) => {
                   const asset = getAssetFromPath(cutaway.video);
@@ -1247,6 +1233,8 @@ interface SceneBlockProps {
   onRegenerate: (assetId: string) => void;
   onUpdateCutaway?: (sceneId: string, cutawayIndex: number, updates: CutawayUpdate) => void;
   onInsertCutaway?: (sceneId: string, cutaway: CutawayConfig) => void;
+  triggerInsertModal?: { sceneId: string; time: number } | null;
+  onClearTrigger?: () => void;
   onDeleteCutaway?: (sceneId: string, cutawayIndex: number) => void;
 }
 
@@ -1272,7 +1260,9 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
   onRegenerate,
   onUpdateCutaway,
   onInsertCutaway,
-  onDeleteCutaway
+  onDeleteCutaway,
+  triggerInsertModal,
+  onClearTrigger
 }) => {
   // _assets and _totalDuration available for future features (e.g., overall timeline)
   void _assets;
@@ -1298,6 +1288,20 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
   const timelineRef = useRef<HTMLDivElement>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [previewUpdate, setPreviewUpdate] = useState<{ index: number; startTime: number; duration: number } | null>(null);
+
+  // Handle triggered insert modal from main timeline
+  useEffect(() => {
+    if (triggerInsertModal && triggerInsertModal.sceneId === scene.sceneId) {
+      console.log(`[SceneBlock] Opening insert modal for ${scene.sceneId} at ${triggerInsertModal.time}s`);
+      setInsertTime(triggerInsertModal.time);
+      setShowInsertModal(true);
+      setIsExpanded(true); // Ensure scene is expanded
+      // Clear the trigger after processing
+      if (onClearTrigger) {
+        onClearTrigger();
+      }
+    }
+  }, [triggerInsertModal, scene.sceneId, onClearTrigger]);
 
   // Convert pixel position to time
   const pixelToTime = useCallback((pixelX: number): number => {
