@@ -163,34 +163,148 @@ const initialBRollAssets: BRollAsset[] = [
     createdAt: new Date().toISOString(),
     versions: []
   },
-  // Placeholders for new scenes 9-14 (to be replaced with stock videos)
+  // Stock videos for scenes 9-14 (Pexels)
   {
-    id: 'typing_laptop',
-    filename: 'typing_laptop_documents.mp4',
-    path: 'broll/typing_laptop_documents.mp4',
-    description: 'Person typing on laptop reviewing documents - NEEDS STOCK VIDEO',
+    id: 'stock_person_typing',
+    filename: 'person_typing.mp4',
+    path: 'https://www.pexels.com/video/946146/download',
+    description: 'Stock video: Person typing on keyboard',
     status: 'pending',
-    usedInScenes: ['Scene 09', 'Scene 10'],
+    usedInScenes: ['Scene 09'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/946146/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
-    id: 'organizing_files',
-    filename: 'organizing_files.mp4',
-    path: 'broll/organizing_files.mp4',
-    description: 'Person organizing documents and files - NEEDS STOCK VIDEO',
+    id: 'stock_credit_score_check',
+    filename: 'credit_score_check.mp4',
+    path: 'https://www.pexels.com/video/946146/download',
+    description: 'Stock video: Checking credit score on computer',
+    status: 'pending',
+    usedInScenes: ['Scene 09'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/946146/download',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_filling_form',
+    filename: 'filling_form.mp4',
+    path: 'https://www.pexels.com/video/8060732/download',
+    description: 'Stock video: Person filling up a form (Pexels 8060732)',
+    status: 'pending',
+    usedInScenes: ['Scene 10'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/8060732/download',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_typing_fast',
+    filename: 'typing_fast.mp4',
+    path: 'https://www.pexels.com/video/852421/download',
+    description: 'Stock video: Person typing fast (Pexels 852421)',
+    status: 'pending',
+    usedInScenes: ['Scene 10'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/852421/download',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_arranging_documents',
+    filename: 'arranging_documents.mp4',
+    path: 'https://www.pexels.com/video/6177732/download',
+    description: 'Stock video: Person arranging documents at office desk (Pexels 6177732)',
     status: 'pending',
     usedInScenes: ['Scene 11'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/6177732/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
-    id: 'signing_contract',
-    filename: 'signing_contract.mp4',
-    path: 'broll/signing_contract.mp4',
-    description: 'Handshake and contract signing - NEEDS STOCK VIDEO',
+    id: 'stock_paper_printing',
+    filename: 'paper_printing.mp4',
+    path: 'https://www.pexels.com/video/6962434/download',
+    description: 'Stock video: Paper printing office documents (Pexels 6962434)',
+    status: 'pending',
+    usedInScenes: ['Scene 11'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/6962434/download',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_medical_bills',
+    filename: 'medical_bills.mp4',
+    path: 'https://www.pexels.com/video/946146/download',
+    description: 'Stock video: Medical bills and paperwork',
+    status: 'pending',
+    usedInScenes: ['Scene 12'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/946146/download',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_calculator_bills',
+    filename: 'calculator_bills.mp4',
+    path: 'https://www.pexels.com/video/946146/download',
+    description: 'Stock video: Calculator and bills on desk',
+    status: 'pending',
+    usedInScenes: ['Scene 12'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/946146/download',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_signing_agreement',
+    filename: 'signing_agreement.mp4',
+    path: 'https://www.pexels.com/video/8814706/download',
+    description: 'Stock video: Person signing an agreement (Pexels 8814706)',
     status: 'pending',
     usedInScenes: ['Scene 13'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/8814706/download',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_signing_contract',
+    filename: 'signing_contract.mp4',
+    path: 'https://www.pexels.com/video/5923409/download',
+    description: 'Stock video: Person signing a contract (Pexels 5923409)',
+    status: 'pending',
+    usedInScenes: ['Scene 13'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/5923409/download',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_celebrating_success',
+    filename: 'celebrating_success.mp4',
+    path: 'https://www.pexels.com/video/6194810/download',
+    description: 'Stock video: Man celebrating success (Pexels 6194810)',
+    status: 'pending',
+    usedInScenes: ['Scene 14'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/6194810/download',
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'stock_people_celebrating',
+    filename: 'people_celebrating.mp4',
+    path: 'https://www.pexels.com/video/8134766/download',
+    description: 'Stock video: People celebrating success (Pexels 8134766)',
+    status: 'pending',
+    usedInScenes: ['Scene 14'],
+    source: 'pexels',
+    videoUrl: 'https://www.pexels.com/video/8134766/download',
     createdAt: new Date().toISOString(),
     versions: []
   }
@@ -230,28 +344,28 @@ const initialSceneCutaways: SceneCutaway[] = [
     { video: 'broll/government_building.mp4', startTime: 8.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ]},
   { sceneId: 'scene_09', sceneTitle: 'Scene 09 - Check Your Report', cutaways: [
-    { video: 'broll/typing_laptop_documents.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/credit_report.mp4', startTime: 8.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: 'https://www.pexels.com/video/946146/download', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: 'https://www.pexels.com/video/6801876/download', startTime: 8.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ]},
   { sceneId: 'scene_10', sceneTitle: 'Scene 10 - Disputing Errors', cutaways: [
-    { video: 'broll/typing_laptop_documents.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
-    { video: 'broll/signing_document.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: 'https://www.pexels.com/video/8060732/download', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: 'https://www.pexels.com/video/852421/download', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ]},
   { sceneId: 'scene_11', sceneTitle: 'Scene 11 - Document Everything', cutaways: [
-    { video: 'broll/organizing_files.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/signing_document.mp4', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+    { video: 'https://www.pexels.com/video/6177732/download', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: 'https://www.pexels.com/video/6962434/download', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ]},
   { sceneId: 'scene_12', sceneTitle: 'Scene 12 - Debt Over $500', cutaways: [
-    { video: 'broll/worried_bills.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 0.9 },
-    { video: 'broll/calendar_deadlines.mp4', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: 'https://www.pexels.com/video/5981723/download', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 0.9 },
+    { video: 'https://www.pexels.com/video/9057559/download', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ]},
   { sceneId: 'scene_13', sceneTitle: 'Scene 13 - Pay-for-Delete Strategy', cutaways: [
-    { video: 'broll/signing_contract.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/signing_document.mp4', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
+    { video: 'https://www.pexels.com/video/8814706/download', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: 'https://www.pexels.com/video/5923409/download', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
   ]},
   { sceneId: 'scene_14', sceneTitle: 'Scene 14 - Final Call to Action', cutaways: [
-    { video: 'broll/happy_family.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
-    { video: 'broll/credit_report.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+    { video: 'https://www.pexels.com/video/6194810/download', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: 'https://www.pexels.com/video/8134766/download', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ]}
 ];
 
