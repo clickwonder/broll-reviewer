@@ -848,20 +848,29 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                       // Calculate scene-relative start time
                       const startTime = clickedTime - scene.sceneStart;
 
-                      // Create a default cutaway at the clicked position
-                      const newCutaway: CutawayConfig = {
-                        video: '', // Will be set by insert modal
-                        startTime: Math.max(0, Math.round(startTime * 10) / 10),
-                        duration: 3, // Default 3 seconds
-                        style: 'default',
-                        videoStartTime: 0,
-                        playbackRate: 1
-                      };
+                      // Show prompt for video URL or scroll to scene
+                      const sceneNumber = scenes.indexOf(scene) + 1;
+                      const message = `Insert B-roll at ${startTime.toFixed(1)}s in Scene ${sceneNumber}?\n\n` +
+                        `Options:\n` +
+                        `1. Enter a video URL/path below\n` +
+                        `2. Click Cancel and use Scene ${sceneNumber}'s Insert button for more options (stock videos, AI generation)`;
 
-                      console.log(`[Timeline Click] Inserting cutaway in ${scene.sceneId} at ${startTime.toFixed(1)}s`);
+                      const videoUrl = prompt(message);
 
-                      // For now, just log - we'll need to show a modal to select video
-                      alert(`Click "Insert" button in Scene ${scenes.indexOf(scene) + 1} to add B-roll at ${startTime.toFixed(1)}s`);
+                      if (videoUrl && videoUrl.trim()) {
+                        // Create cutaway with the provided URL
+                        const newCutaway: CutawayConfig = {
+                          video: videoUrl.trim(),
+                          startTime: Math.max(0, Math.round(startTime * 10) / 10),
+                          duration: 3, // Default 3 seconds
+                          style: 'default',
+                          videoStartTime: 0,
+                          playbackRate: 1
+                        };
+
+                        console.log(`[Timeline Click] Inserting cutaway in ${scene.sceneId} at ${startTime.toFixed(1)}s with video: ${videoUrl}`);
+                        onInsertCutaway(scene.sceneId, newCutaway);
+                      }
                     }
                   }
                 }}
