@@ -21,7 +21,8 @@ import {
   saveAssetVersion,
   appAssetToDbFormat,
   dbAssetToAppAsset,
-  transformDBScenesToSceneCutaways
+  transformDBScenesToSceneCutaways,
+  isDatabaseEnabled
 } from './services/databaseService';
 
 // Map types.ts model names (underscores) to kieService model names (hyphens)
@@ -254,6 +255,60 @@ function App() {
   };
 
   const handleInsertCutaway = async (sceneId: string, cutaway: CutawayConfig) => {
+    // Check if we need to create an asset for this video
+    const videoPath = cutaway.video;
+    console.log(`[handleInsertCutaway] Checking for asset with path: ${videoPath}`);
+    console.log(`[handleInsertCutaway] Current assets count: ${assets.length}`);
+
+    const existingAsset = assets.find(a =>
+      a.path === videoPath ||
+      a.videoUrl === videoPath ||
+      a.path?.split('/').pop() === videoPath.split('/').pop()
+    );
+
+    console.log(`[handleInsertCutaway] Existing asset found:`, existingAsset ? existingAsset.filename : 'NONE');
+
+    // If no asset exists, create one (for stock videos or external URLs)
+    if (!existingAsset) {
+      console.log(`[handleInsertCutaway] Creating new asset for: ${videoPath}`);
+      const filename = videoPath.split('/').pop() || 'unknown.mp4';
+      const isExternalUrl = videoPath.startsWith('http://') || videoPath.startsWith('https://');
+      const source = videoPath.includes('pexels.com') ? 'pexels' :
+                     videoPath.includes('pixabay.com') ? 'pixabay' : 'local';
+
+      const newAsset: BRollAsset = {
+        id: crypto.randomUUID(),
+        filename,
+        path: videoPath, // Use the URL as path (satisfies NOT NULL constraint)
+        videoUrl: isExternalUrl ? videoPath : undefined, // Store external URL in videoUrl
+        description: `Stock video from ${source}`,
+        status: 'pending',
+        usedInScenes: [sceneId],
+        source: source as 'ai' | 'pexels' | 'pixabay' | 'local',
+        createdAt: new Date().toISOString(),
+        versions: []
+      };
+
+      // Add to assets array
+      console.log(`[handleInsertCutaway] About to add asset to state:`, newAsset);
+      setAssets(prev => {
+        const updated = [...prev, newAsset];
+        console.log(`[handleInsertCutaway] Assets array updated. New count: ${updated.length}`);
+        return updated;
+      });
+      console.log(`[handleInsertCutaway] Asset added to state successfully`);
+
+      // Save to database
+      if (currentProject && isDatabaseEnabled()) {
+        try {
+          await saveAsset(currentProject.id, appAssetToDbFormat(newAsset, newAsset.source));
+          console.log('[Timeline Edit] Asset saved to database');
+        } catch (error) {
+          console.error('[Timeline Edit] Failed to save asset:', error);
+        }
+      }
+    }
+
     // Compute the new scenes array
     const updatedScenes = sceneCutaways.map(scene => {
       if (scene.sceneId !== sceneId) return scene;

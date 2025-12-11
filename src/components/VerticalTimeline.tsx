@@ -31,17 +31,35 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
   onDeleteCutaway
 }) => {
   const getAssetFromPath = (path: string): BRollAsset | undefined => {
+    console.log(`[VerticalTimeline getAssetFromPath] Looking for path: ${path}`);
+
     // Try to match by full path first
     let asset = assets.find(a => a.path === path || a.videoUrl === path);
-    if (asset) return asset;
+    if (asset) {
+      console.log(`[VerticalTimeline getAssetFromPath] ✅ Found by full path:`, asset.filename);
+      return asset;
+    }
 
     // Try to match by filename as fallback
     const filename = path.split('/').pop();
+    console.log(`[VerticalTimeline getAssetFromPath] Trying filename match: ${filename}`);
     asset = assets.find(a =>
       a.filename === filename ||
       a.path?.split('/').pop() === filename ||
       a.videoUrl?.split('/').pop() === filename
     );
+
+    if (asset) {
+      console.log(`[VerticalTimeline getAssetFromPath] ✅ Found by filename:`, asset.filename);
+    } else {
+      console.log(`[VerticalTimeline getAssetFromPath] ❌ No match found for: ${path}`);
+      console.log(`[VerticalTimeline getAssetFromPath] Available assets:`, assets.map(a => ({
+        filename: a.filename,
+        path: a.path,
+        videoUrl: a.videoUrl
+      })));
+    }
+
     return asset;
   };
 
@@ -1209,6 +1227,7 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
   void _assets;
   void _totalDuration;
   const [isExpanded, setIsExpanded] = useState(true);
+  const [hoveredCutaway, setHoveredCutaway] = useState<number | null>(null);
   const [showInsertModal, setShowInsertModal] = useState(false);
   const [insertTime, setInsertTime] = useState(0);
   const [selectedAssetForInsert, setSelectedAssetForInsert] = useState<string>('');
@@ -1672,6 +1691,8 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
                     boxShadow: isDragging ? '0 4px 12px rgba(0,0,0,0.4)' : 'none'
                   }}
                   onMouseDown={(e) => startDrag(e, idx, 'move')}
+                  onMouseEnter={() => setHoveredCutaway(idx)}
+                  onMouseLeave={() => setHoveredCutaway(null)}
                   title={`${cutaway.video.split('/').pop()} (${displayStartTime.toFixed(1)}s - ${(displayStartTime + displayDuration).toFixed(1)}s)\nDrag to move, drag edges to resize`}
                 >
                   {/* Left resize handle */}
@@ -1741,11 +1762,10 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        opacity: 0,
-                        transition: 'opacity 0.2s'
+                        opacity: hoveredCutaway === idx ? 1 : 0,
+                        transition: 'opacity 0.2s',
+                        pointerEvents: hoveredCutaway === idx ? 'auto' : 'none'
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                      onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
                     >
                       ×
                     </button>
