@@ -162,6 +162,37 @@ const initialBRollAssets: BRollAsset[] = [
     source: 'pexels',
     createdAt: new Date().toISOString(),
     versions: []
+  },
+  // Placeholders for new scenes 9-14 (to be replaced with stock videos)
+  {
+    id: 'typing_laptop',
+    filename: 'typing_laptop_documents.mp4',
+    path: 'broll/typing_laptop_documents.mp4',
+    description: 'Person typing on laptop reviewing documents - NEEDS STOCK VIDEO',
+    status: 'pending',
+    usedInScenes: ['Scene 09', 'Scene 10'],
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'organizing_files',
+    filename: 'organizing_files.mp4',
+    path: 'broll/organizing_files.mp4',
+    description: 'Person organizing documents and files - NEEDS STOCK VIDEO',
+    status: 'pending',
+    usedInScenes: ['Scene 11'],
+    createdAt: new Date().toISOString(),
+    versions: []
+  },
+  {
+    id: 'signing_contract',
+    filename: 'signing_contract.mp4',
+    path: 'broll/signing_contract.mp4',
+    description: 'Handshake and contract signing - NEEDS STOCK VIDEO',
+    status: 'pending',
+    usedInScenes: ['Scene 13'],
+    createdAt: new Date().toISOString(),
+    versions: []
   }
 ];
 
@@ -197,6 +228,30 @@ const initialSceneCutaways: SceneCutaway[] = [
   { sceneId: 'scene_08', sceneTitle: 'Scene 08 - Legal Challenges', cutaways: [
     { video: 'broll/courtroom.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
     { video: 'broll/government_building.mp4', startTime: 8.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+  ]},
+  { sceneId: 'scene_09', sceneTitle: 'Scene 09 - Check Your Report', cutaways: [
+    { video: 'broll/typing_laptop_documents.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: 'broll/credit_report.mp4', startTime: 8.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+  ]},
+  { sceneId: 'scene_10', sceneTitle: 'Scene 10 - Disputing Errors', cutaways: [
+    { video: 'broll/typing_laptop_documents.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: 'broll/signing_document.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+  ]},
+  { sceneId: 'scene_11', sceneTitle: 'Scene 11 - Document Everything', cutaways: [
+    { video: 'broll/organizing_files.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: 'broll/signing_document.mp4', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+  ]},
+  { sceneId: 'scene_12', sceneTitle: 'Scene 12 - Debt Over $500', cutaways: [
+    { video: 'broll/worried_bills.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 0.9 },
+    { video: 'broll/calendar_deadlines.mp4', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+  ]},
+  { sceneId: 'scene_13', sceneTitle: 'Scene 13 - Pay-for-Delete Strategy', cutaways: [
+    { video: 'broll/signing_contract.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: 'broll/signing_document.mp4', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
+  ]},
+  { sceneId: 'scene_14', sceneTitle: 'Scene 14 - Final Call to Action', cutaways: [
+    { video: 'broll/happy_family.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: 'broll/credit_report.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ]}
 ];
 
