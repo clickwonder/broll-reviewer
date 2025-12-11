@@ -87,6 +87,7 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
         getAssetFromPath={getAssetFromPath}
         assets={assets}
         onUpdateCutaway={onUpdateCutaway}
+        onInsertCutaway={onInsertCutaway}
       />
 
       <div style={{
@@ -206,6 +207,7 @@ interface FullVideoPreviewProps {
   getAssetFromPath: (path: string) => BRollAsset | undefined;
   assets: BRollAsset[]; // Added to trigger re-renders on asset changes
   onUpdateCutaway?: (sceneId: string, cutawayIndex: number, updates: CutawayUpdate) => void;
+  onInsertCutaway?: (sceneId: string, cutaway: CutawayConfig) => void;
 }
 
 // Drag operation types for full timeline
@@ -225,7 +227,8 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   totalDuration,
   getAssetFromPath,
   assets,
-  onUpdateCutaway
+  onUpdateCutaway,
+  onInsertCutaway
 }) => {
   const baseVideoRef = useRef<HTMLVideoElement>(null);
   const cutawayVideoRef = useRef<HTMLVideoElement>(null);
@@ -822,8 +825,47 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                   position: 'relative',
                   height: '28px',
                   background: '#1e293b',
-                  borderRadius: '0 0 8px 8px'
+                  borderRadius: '0 0 8px 8px',
+                  cursor: 'pointer'
                 }}
+                onClick={(e) => {
+                  // Only handle clicks on the timeline background, not on cutaway bars
+                  if (e.target === e.currentTarget && onInsertCutaway) {
+                    const rect = cutawayTimelineRef.current?.getBoundingClientRect();
+                    if (!rect) return;
+
+                    // Calculate clicked time
+                    const clickX = e.clientX - rect.left;
+                    const clickedTime = (clickX / rect.width) * totalDuration;
+
+                    // Find which scene this time falls into
+                    const scene = scenes.find(s =>
+                      clickedTime >= s.sceneStart &&
+                      clickedTime < s.sceneStart + s.sceneDuration
+                    );
+
+                    if (scene) {
+                      // Calculate scene-relative start time
+                      const startTime = clickedTime - scene.sceneStart;
+
+                      // Create a default cutaway at the clicked position
+                      const newCutaway: CutawayConfig = {
+                        video: '', // Will be set by insert modal
+                        startTime: Math.max(0, Math.round(startTime * 10) / 10),
+                        duration: 3, // Default 3 seconds
+                        style: 'default',
+                        videoStartTime: 0,
+                        playbackRate: 1
+                      };
+
+                      console.log(`[Timeline Click] Inserting cutaway in ${scene.sceneId} at ${startTime.toFixed(1)}s`);
+
+                      // For now, just log - we'll need to show a modal to select video
+                      alert(`Click "Insert" button in Scene ${scenes.indexOf(scene) + 1} to add B-roll at ${startTime.toFixed(1)}s`);
+                    }
+                  }
+                }}
+                title="Click on empty timeline area to see where to insert B-roll"
               >
                 {allCutaways.map((cutaway, idx) => {
                   const asset = getAssetFromPath(cutaway.video);
