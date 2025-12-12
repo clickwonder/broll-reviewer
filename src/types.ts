@@ -25,10 +25,21 @@ export interface BRollVersion {
   videoUrl?: string;  // Generated video URL
 }
 
+export interface StatisticsOverlay {
+  main: string;
+  mainSubtitle?: string;
+  secondary?: string;
+  secondarySubtitle?: string;
+  showAt?: number;  // Time in seconds when to show
+  hideAt?: number;  // Time in seconds when to hide
+}
+
 export interface SceneCutaway {
   sceneId: string;
   sceneTitle: string;
+  duration: number;  // Scene duration in seconds (from audio file)
   cutaways: CutawayConfig[];
+  statistics?: StatisticsOverlay;
 }
 
 export interface CutawayConfig {

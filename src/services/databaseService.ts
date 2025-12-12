@@ -403,6 +403,7 @@ export function transformDBScenesToSceneCutaways(
     return {
       sceneId: rawScene.id,
       sceneTitle: rawScene.name,
+      duration: rawScene.duration || 15, // Use scene duration from DB, default to 15s
       cutaways
     };
   });

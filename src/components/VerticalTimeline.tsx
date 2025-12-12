@@ -34,45 +34,31 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
   const [triggerInsertModal, setTriggerInsertModal] = useState<{ sceneId: string; time: number } | null>(null);
 
   const getAssetFromPath = (path: string): BRollAsset | undefined => {
-    console.log(`[VerticalTimeline getAssetFromPath] Looking for path: ${path}`);
-
     // Try to match by full path first
     let asset = assets.find(a => a.path === path || a.videoUrl === path);
     if (asset) {
-      console.log(`[VerticalTimeline getAssetFromPath] ✅ Found by full path:`, asset.filename);
       return asset;
     }
 
     // Try to match by filename as fallback
     const filename = path.split('/').pop();
-    console.log(`[VerticalTimeline getAssetFromPath] Trying filename match: ${filename}`);
     asset = assets.find(a =>
       a.filename === filename ||
       a.path?.split('/').pop() === filename ||
       a.videoUrl?.split('/').pop() === filename
     );
 
-    if (asset) {
-      console.log(`[VerticalTimeline getAssetFromPath] ✅ Found by filename:`, asset.filename);
-    } else {
-      console.log(`[VerticalTimeline getAssetFromPath] ❌ No match found for: ${path}`);
-      console.log(`[VerticalTimeline getAssetFromPath] Available assets:`, assets.map(a => ({
-        filename: a.filename,
-        path: a.path,
-        videoUrl: a.videoUrl
-      })));
-    }
-
     return asset;
   };
 
   // Calculate cumulative timeline
+  // Use scene.duration from audio files as source of truth
   let cumulativeTime = 0;
   const scenesWithTime = (scenes || []).map(scene => {
-    const cutaways = scene.cutaways || [];
-    const sceneDuration = Math.max(
-      ...(cutaways.length > 0 ? cutaways.map(c => c.startTime + c.duration) : [0]),
-      15 // minimum scene duration
+    // Use scene.duration from audio files, fallback to cutaway calculation if not available
+    const sceneDuration = scene.duration || Math.max(
+      ...((scene.cutaways || []).length > 0 ? scene.cutaways.map(c => c.startTime + c.duration) : [0]),
+      15 // minimum scene duration fallback
     );
     const sceneStart = cumulativeTime;
     cumulativeTime += sceneDuration;
@@ -235,9 +221,9 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   onUpdateCutaway,
   onTimelineClick
 }) => {
-  const baseVideoRef = useRef<HTMLVideoElement>(null);
   const cutawayVideoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const targetSeekTimeRef = useRef<number>(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showWithCutaways, setShowWithCutaways] = useState(true);
@@ -248,6 +234,27 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const animationFrameRef = useRef<number | null>(null);
+
+  // Track which scene video should be loaded
+  const [currentSceneVideo, setCurrentSceneVideo] = useState<string>('/scenes/scene_01.mp4');
+  const [currentSceneIndex, setCurrentSceneIndex] = useState<number>(0);
+  const currentSceneIndexRef = useRef<number>(0); // Ref to avoid stale closures
+  const isSwitchingSceneRef = useRef(false);
+
+  // Dual-video crossfade system for smooth audio transitions
+  const [activeVideoSlot, setActiveVideoSlot] = useState<'A' | 'B'>('A');
+  const activeVideoSlotRef = useRef<'A' | 'B'>('A'); // Ref to avoid stale closures
+  const [videoSlotA, setVideoSlotA] = useState<string>('/scenes/scene_01.mp4');
+  const [videoSlotB, setVideoSlotB] = useState<string | null>(null);
+  const videoRefA = useRef<HTMLVideoElement>(null);
+  const videoRefB = useRef<HTMLVideoElement>(null);
+  const crossfadeTimeoutRef = useRef<number | null>(null);
+  const CROSSFADE_DURATION = 150; // ms for audio crossfade
+  const isTransitioningRef = useRef(false); // Prevent double transitions
+
+  // Timer-based scene tracking - track elapsed time independently of video playback
+  const sceneStartTimeRef = useRef<number>(0); // performance.now() when scene started
+  const sceneElapsedRef = useRef<number>(0); // Elapsed time in current scene (seconds)
 
   const startYRef = useRef<number>(0);
   const startHeightRef = useRef<number>(0);
@@ -391,46 +398,115 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
     setIsResizing(true);
   };
 
+  // Note: Time-based scene switching removed - it was causing premature transitions.
+  // Scene transitions now happen ONLY via:
+  // 1. onEnded event -> transitionToNextScene() for natural playback
+  // 2. seekTo() for user-initiated timeline clicks
+
+  // Effect to handle video seeking when manually seeking to a different scene
+  useEffect(() => {
+    // Only seek when we're actually switching scenes via seekTo (not crossfade)
+    if (!isSwitchingSceneRef.current) return;
+
+    const activeVideo = activeVideoSlot === 'A' ? videoRefA.current : videoRefB.current;
+    if (!activeVideo) return;
+
+    // Find which scene we should be in based on current scene index
+    const scene = scenes[currentSceneIndex];
+    if (!scene) return;
+
+    // Calculate the target seek time
+    const sceneLocalTime = targetSeekTimeRef.current - scene.sceneStart;
+
+    const handleLoadedData = () => {
+      console.log(`[Video Loaded] Seeking to ${sceneLocalTime.toFixed(2)}s in scene ${currentSceneIndex + 1}`);
+      activeVideo.currentTime = Math.max(0, sceneLocalTime);
+
+      console.log('[Video Loaded] Resetting isSwitchingSceneRef to false');
+      isSwitchingSceneRef.current = false;
+
+      // Ensure video plays if we were playing before
+      if (isPlaying) {
+        activeVideo.play().catch(() => {});
+      }
+    };
+
+    // If video is already loaded, seek immediately
+    if (activeVideo.readyState >= 2) {
+      handleLoadedData();
+    } else {
+      // Wait for video to load
+      activeVideo.addEventListener('loadeddata', handleLoadedData, { once: true });
+
+      return () => {
+        activeVideo.removeEventListener('loadeddata', handleLoadedData);
+      };
+    }
+  }, [currentSceneVideo, currentSceneIndex, scenes, activeVideoSlot, isPlaying]);
+
   // Update current time and active elements using animation frame for smoother updates
   useEffect(() => {
-    const baseVideo = baseVideoRef.current;
-    if (!baseVideo) return;
+    // Get the currently active video based on slot
+    const activeVideo = activeVideoSlot === 'A' ? videoRefA.current : videoRefB.current;
+    if (!activeVideo) return;
 
     const updateTimeline = () => {
-      const time = baseVideo.currentTime;
-      setCurrentTime(time);
-
-      // Find current scene and cutaway
-      let foundScene = false;
-      for (const scene of scenes) {
-        if (time >= scene.sceneStart && time < scene.sceneStart + scene.sceneDuration) {
-          setActiveScene(scene.sceneId);
-          foundScene = true;
-
-          // Check if we're in a cutaway
-          const sceneLocalTime = time - scene.sceneStart;
-          let foundCutaway = false;
-          for (const cutaway of (scene.cutaways || [])) {
-            if (sceneLocalTime >= cutaway.startTime && sceneLocalTime < cutaway.startTime + cutaway.duration) {
-              setActiveCutaway(cutaway.video);
-              // Get the actual asset for this cutaway
-              const asset = getAssetFromPath(cutaway.video);
-              setActiveCutawayAsset(asset || null);
-              foundCutaway = true;
-              break;
-            }
-          }
-          if (!foundCutaway) {
-            setActiveCutaway(null);
-            setActiveCutawayAsset(null);
-          }
-          break;
+      // Get active video fresh using ref to avoid stale closure
+      const video = activeVideoSlotRef.current === 'A' ? videoRefA.current : videoRefB.current;
+      if (!video) {
+        if (isPlaying) {
+          animationFrameRef.current = requestAnimationFrame(updateTimeline);
         }
+        return;
       }
-      if (!foundScene) {
-        setActiveScene(null);
-        setActiveCutaway(null);
-        setActiveCutawayAsset(null);
+
+      if (isSwitchingSceneRef.current) {
+        // Don't update timeline during scene switch
+        if (isPlaying) {
+          animationFrameRef.current = requestAnimationFrame(updateTimeline);
+        }
+        return;
+      }
+
+      // Calculate elapsed time in current scene using performance.now() timer
+      // Track elapsed time in current scene using performance timer
+      // Use ref to avoid stale closure
+      const sceneIdx = currentSceneIndexRef.current;
+      const currentScene = scenes[sceneIdx];
+      if (currentScene) {
+        // Update elapsed time if playing
+        if (isPlaying && sceneStartTimeRef.current > 0) {
+          sceneElapsedRef.current = (performance.now() - sceneStartTimeRef.current) / 1000;
+        }
+
+        const sceneLocalTime = sceneElapsedRef.current;
+        const timelineTime = currentScene.sceneStart + sceneLocalTime;
+        setCurrentTime(timelineTime);
+
+        // Find current scene and cutaway
+        setActiveScene(currentScene.sceneId);
+
+        // Check if we're in a cutaway based on scene elapsed time
+        let foundCutaway = false;
+        for (const cutaway of (currentScene.cutaways || [])) {
+          // Use actual elapsed time for cutaway timing
+          if (sceneLocalTime >= cutaway.startTime && sceneLocalTime < cutaway.startTime + cutaway.duration) {
+            setActiveCutaway(cutaway.video);
+            // Get the actual asset for this cutaway
+            const asset = getAssetFromPath(cutaway.video);
+            setActiveCutawayAsset(asset || null);
+            foundCutaway = true;
+            break;
+          }
+        }
+        if (!foundCutaway) {
+          setActiveCutaway(null);
+          setActiveCutawayAsset(null);
+        }
+
+        // Scene transitions are now handled by video onEnded event since
+        // Remotion videos are rendered to match audio duration exactly.
+        // Timer kept only for timeline position tracking, not for triggering transitions.
       }
 
       if (isPlaying) {
@@ -449,28 +525,190 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
       }
     };
 
-    baseVideo.addEventListener('timeupdate', handleTimeUpdate);
-    baseVideo.addEventListener('seeked', updateTimeline);
+    activeVideo.addEventListener('timeupdate', handleTimeUpdate);
+    activeVideo.addEventListener('seeked', updateTimeline);
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      baseVideo.removeEventListener('timeupdate', handleTimeUpdate);
-      baseVideo.removeEventListener('seeked', updateTimeline);
+      activeVideo.removeEventListener('timeupdate', handleTimeUpdate);
+      activeVideo.removeEventListener('seeked', updateTimeline);
     };
-  }, [scenes, isPlaying, getAssetFromPath]);
+  }, [scenes, isPlaying, getAssetFromPath, currentSceneIndex, activeVideoSlot]);
+
+  // Keep refs in sync with state to avoid stale closures in callbacks
+  useEffect(() => {
+    activeVideoSlotRef.current = activeVideoSlot;
+  }, [activeVideoSlot]);
+
+  useEffect(() => {
+    currentSceneIndexRef.current = currentSceneIndex;
+  }, [currentSceneIndex]);
+
+  // Get the currently active video ref (uses ref for closures, state for rendering)
+  const getActiveVideoRef = () => activeVideoSlotRef.current === 'A' ? videoRefA : videoRefB;
+  const getInactiveVideoRef = () => activeVideoSlotRef.current === 'A' ? videoRefB : videoRefA;
+
+  // Preload the next scene video into the inactive slot
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const nextIndex = currentSceneIndex + 1;
+    if (nextIndex >= scenes.length) return;
+
+    const sceneNumber = String(nextIndex + 1).padStart(2, '0');
+    const nextVideo = `/scenes/scene_${sceneNumber}.mp4`;
+
+    // Load into the inactive slot
+    if (activeVideoSlot === 'A') {
+      if (videoSlotB !== nextVideo) {
+        console.log(`[Preload] Loading next scene into slot B: ${nextVideo}`);
+        setVideoSlotB(nextVideo);
+      }
+    } else {
+      if (videoSlotA !== nextVideo) {
+        console.log(`[Preload] Loading next scene into slot A: ${nextVideo}`);
+        setVideoSlotA(nextVideo);
+      }
+    }
+  }, [currentSceneIndex, isPlaying, scenes.length, activeVideoSlot, videoSlotA, videoSlotB]);
+
+  // Handle smooth transition to next scene with audio crossfade
+  const transitionToNextScene = () => {
+    // Prevent double transitions
+    if (isTransitioningRef.current) {
+      console.log('[Transition] Already transitioning, skipping');
+      return;
+    }
+
+    // Use refs to get current values (avoids stale closures)
+    const currentIndex = currentSceneIndexRef.current;
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= scenes.length) {
+      setIsPlaying(false);
+      return;
+    }
+
+    const currentSlot = activeVideoSlotRef.current;
+    const currentVideo = getActiveVideoRef().current;
+    const nextVideo = getInactiveVideoRef().current;
+
+    // Note: With timer-based transitions, we no longer check video duration.
+    // The scene duration from sceneDuration (audio/narration based) determines transition timing.
+    if (currentVideo) {
+      console.log(`[Transition] Current video: currentTime=${currentVideo.currentTime?.toFixed(2)}s, scene duration=${scenes[currentIndex]?.sceneDuration?.toFixed(2)}s`);
+    }
+
+    isTransitioningRef.current = true;
+
+    console.log(`[Transition] Scene ${currentIndex + 1} -> ${nextIndex + 1}, slot ${currentSlot} -> ${currentSlot === 'A' ? 'B' : 'A'}`);
+
+    if (!currentVideo || !nextVideo) {
+      // Fallback to simple transition
+      console.log('[Transition] Video refs not ready, using simple transition');
+      const sceneNumber = String(nextIndex + 1).padStart(2, '0');
+      if (currentSlot === 'A') {
+        setVideoSlotA(`/scenes/scene_${sceneNumber}.mp4`);
+      } else {
+        setVideoSlotB(`/scenes/scene_${sceneNumber}.mp4`);
+      }
+      setCurrentSceneIndex(nextIndex);
+      setCurrentTime(scenes[nextIndex].sceneStart);
+      // Reset scene timer for new scene
+      sceneStartTimeRef.current = performance.now();
+      sceneElapsedRef.current = 0;
+      isTransitioningRef.current = false;
+      return;
+    }
+
+    // Check if next video is ready
+    if (nextVideo.readyState < 2) {
+      console.log('[Transition] Next video not ready, using simple transition');
+      const sceneNumber = String(nextIndex + 1).padStart(2, '0');
+      if (currentSlot === 'A') {
+        setVideoSlotA(`/scenes/scene_${sceneNumber}.mp4`);
+      } else {
+        setVideoSlotB(`/scenes/scene_${sceneNumber}.mp4`);
+      }
+      setCurrentSceneIndex(nextIndex);
+      setCurrentTime(scenes[nextIndex].sceneStart);
+      // Reset scene timer for new scene
+      sceneStartTimeRef.current = performance.now();
+      sceneElapsedRef.current = 0;
+      isTransitioningRef.current = false;
+      return;
+    }
+
+    console.log(`[Transition] Starting crossfade to scene ${nextIndex + 1}`);
+
+    // Start next video playing with volume 0
+    nextVideo.currentTime = 0;
+    nextVideo.volume = 0;
+    nextVideo.play().catch(() => {});
+
+    // Start crossfade: fade out current, fade in next
+    const startTime = performance.now();
+    const doCrossfade = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / CROSSFADE_DURATION, 1);
+
+      currentVideo.volume = Math.max(0, 1 - progress);
+      nextVideo.volume = progress;
+
+      if (progress < 1) {
+        crossfadeTimeoutRef.current = requestAnimationFrame(doCrossfade);
+      } else {
+        // Crossfade complete - swap active slot
+        const newSlot = currentSlot === 'A' ? 'B' : 'A';
+        console.log(`[Transition] Crossfade complete, swapping to slot ${newSlot}`);
+        currentVideo.pause();
+        currentVideo.volume = 1;
+
+        // Swap active slot (use captured currentSlot to determine new slot)
+        setActiveVideoSlot(newSlot);
+        setCurrentSceneIndex(nextIndex);
+        setCurrentTime(scenes[nextIndex].sceneStart);
+
+        // Reset scene timer for new scene
+        sceneStartTimeRef.current = performance.now();
+        sceneElapsedRef.current = 0;
+
+        // Update currentSceneVideo for other parts of the code
+        const sceneNumber = String(nextIndex + 1).padStart(2, '0');
+        setCurrentSceneVideo(`/scenes/scene_${sceneNumber}.mp4`);
+
+        isTransitioningRef.current = false;
+      }
+    };
+
+    doCrossfade();
+  };
+
+  // Cleanup crossfade on unmount
+  useEffect(() => {
+    return () => {
+      if (crossfadeTimeoutRef.current) {
+        cancelAnimationFrame(crossfadeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const togglePlay = () => {
-    if (baseVideoRef.current) {
+    const activeVideo = getActiveVideoRef().current;
+    if (activeVideo) {
       if (isPlaying) {
-        baseVideoRef.current.pause();
+        activeVideo.pause();
         // Also pause cutaway video if present
         if (cutawayVideoRef.current) {
           cutawayVideoRef.current.pause();
         }
+        // Store elapsed time so we can resume from this point
+        sceneElapsedRef.current = (performance.now() - sceneStartTimeRef.current) / 1000;
       } else {
-        baseVideoRef.current.play();
+        // Resume: adjust scene start time to account for already elapsed time
+        sceneStartTimeRef.current = performance.now() - (sceneElapsedRef.current * 1000);
+        activeVideo.play();
         // Also play cutaway video if we're in a cutaway
         if (cutawayVideoRef.current && showWithCutaways && activeCutawayAsset) {
           cutawayVideoRef.current.play();
@@ -481,8 +719,48 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   };
 
   const seekTo = (time: number) => {
-    if (baseVideoRef.current) {
-      baseVideoRef.current.currentTime = time;
+    const activeVideo = getActiveVideoRef().current;
+    if (!activeVideo) return;
+
+    // Find which scene this time falls into
+    const targetSceneIndex = scenes.findIndex(scene =>
+      time >= scene.sceneStart && time < scene.sceneStart + scene.sceneDuration
+    );
+
+    if (targetSceneIndex === -1) return;
+
+    const targetScene = scenes[targetSceneIndex];
+    const sceneLocalTime = time - targetScene.sceneStart;
+
+    if (targetSceneIndex === currentSceneIndex) {
+      // Same scene - just seek within the current video
+      console.log(`[Seek] Within scene ${currentSceneIndex + 1}, seeking to ${sceneLocalTime.toFixed(2)}s`);
+      activeVideo.currentTime = Math.max(0, sceneLocalTime);
+      // Update scene timer to reflect seeked position
+      sceneElapsedRef.current = sceneLocalTime;
+      sceneStartTimeRef.current = performance.now() - (sceneLocalTime * 1000);
+      setCurrentTime(time);
+    } else {
+      // Different scene - need to switch scenes and load new video into active slot
+      console.log(`[Seek] Switching from scene ${currentSceneIndex + 1} to scene ${targetSceneIndex + 1}`);
+      targetSeekTimeRef.current = time;
+      isSwitchingSceneRef.current = true;
+      const sceneNumber = String(targetSceneIndex + 1).padStart(2, '0');
+      const newVideoUrl = `/scenes/scene_${sceneNumber}.mp4`;
+
+      // Update the active slot with the new video
+      if (activeVideoSlot === 'A') {
+        setVideoSlotA(newVideoUrl);
+      } else {
+        setVideoSlotB(newVideoUrl);
+      }
+
+      // Reset scene timer for new scene position
+      sceneElapsedRef.current = sceneLocalTime;
+      sceneStartTimeRef.current = performance.now() - (sceneLocalTime * 1000);
+
+      setCurrentSceneVideo(newVideoUrl);
+      setCurrentSceneIndex(targetSceneIndex);
       setCurrentTime(time);
     }
   };
@@ -668,22 +946,55 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                   overflow: 'hidden'
                 }}
               >
-              {/* Base video (always shown in background) */}
+              {/* Video Slot A - for dual-buffer crossfade system */}
               <video
-                ref={baseVideoRef}
-                src={'/scenes/full_video.mp4'}
+                ref={videoRefA}
+                src={videoSlotA}
+                playsInline
+                preload="auto"
                 style={{
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
                   position: 'absolute',
                   top: 0,
-                  left: 0
+                  left: 0,
+                  zIndex: activeVideoSlot === 'A' ? 0 : -1,
+                  opacity: activeVideoSlot === 'A' ? 1 : 0
                 }}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onEnded={() => setIsPlaying(false)}
+                onEnded={() => {
+                  if (activeVideoSlotRef.current === 'A') {
+                    console.log('[Video Slot A] onEnded - transitioning to next scene');
+                    transitionToNextScene();
+                  }
+                }}
               />
+
+              {/* Video Slot B - for dual-buffer crossfade system */}
+              {videoSlotB && (
+                <video
+                  ref={videoRefB}
+                  src={videoSlotB}
+                  playsInline
+                  preload="auto"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    zIndex: activeVideoSlot === 'B' ? 0 : -1,
+                    opacity: activeVideoSlot === 'B' ? 1 : 0
+                  }}
+                  onEnded={() => {
+                    if (activeVideoSlotRef.current === 'B') {
+                      console.log('[Video Slot B] onEnded - transitioning to next scene');
+                      transitionToNextScene();
+                    }
+                  }}
+                />
+              )}
 
               {/* Cutaway video overlay - shows the actual B-roll asset */}
               {showWithCutaways && activeCutawayAsset && (

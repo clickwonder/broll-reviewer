@@ -310,63 +310,104 @@ const initialBRollAssets: BRollAsset[] = [
   }
 ];
 
+// Scene durations from audio files (seconds)
+// Scene 01: 10.24s, Scene 02: 14.08s, Scene 03: 19.49s, Scene 04: 14.18s
+// Scene 05: 17.71s, Scene 06: 17.66s, Scene 07: 16.69s, Scene 08: 15.62s
+// Scene 09: 17.29s, Scene 10: 21.71s, Scene 11: 17.35s, Scene 12: 23.56s
+// Scene 13: 18.31s, Scene 14: 20.92s
 const initialSceneCutaways: SceneCutaway[] = [
-  { sceneId: 'scene_01', sceneTitle: 'Scene 01 - Medical Debt Title', cutaways: [
+  { sceneId: 'scene_01', sceneTitle: 'Scene 01 - Medical Debt Title', duration: 10.24, cutaways: [
     { video: 'broll/worried_bills.mp4', startTime: 0.5, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
     { video: 'broll/credit_report.mp4', startTime: 5.5, duration: 3.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ]},
-  { sceneId: 'scene_02', sceneTitle: 'Scene 02 - Scope of Problem', cutaways: [
+  { sceneId: 'scene_02', sceneTitle: 'Scene 02 - Scope of Problem', duration: 14.08, cutaways: [
     { video: 'broll/worried_bills.mp4', startTime: 1.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
     { video: 'broll/signing_document.mp4', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
-  ]},
-  { sceneId: 'scene_03', sceneTitle: 'Scene 03 - April 2023', cutaways: [
+  ], statistics: {
+    main: '20 MILLION',
+    mainSubtitle: 'Americans owe medical debt',
+    secondary: '$1,465',
+    secondarySubtitle: 'Median amount in collections'
+  }},
+  { sceneId: 'scene_03', sceneTitle: 'Scene 03 - April 2023', duration: 19.49, cutaways: [
     { video: 'broll/happy_family.mp4', startTime: 2.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
     { video: 'broll/calendar_deadlines.mp4', startTime: 10.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
-  ]},
-  { sceneId: 'scene_04', sceneTitle: 'Scene 04 - Credit Score', cutaways: [
+  ], statistics: {
+    main: '70%',
+    mainSubtitle: 'Medical debt removed',
+    secondary: '23 Million',
+    secondarySubtitle: 'People affected April 2023'
+  }},
+  { sceneId: 'scene_04', sceneTitle: 'Scene 04 - Credit Score', duration: 14.18, cutaways: [
     { video: 'broll/credit_report.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
     { video: 'broll/happy_family.mp4', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
-  ]},
-  { sceneId: 'scene_05', sceneTitle: 'Scene 05 - Current Rules', cutaways: [
+  ], statistics: {
+    main: '+25 POINTS',
+    mainSubtitle: 'Average credit score increase',
+    secondary: '585 → 615',
+    secondarySubtitle: 'Typical score improvement'
+  }},
+  { sceneId: 'scene_05', sceneTitle: 'Scene 05 - Current Rules', duration: 17.71, cutaways: [
     { video: 'broll/signing_document.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
     { video: 'broll/calendar_deadlines.mp4', startTime: 9.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
-  ]},
-  { sceneId: 'scene_06', sceneTitle: 'Scene 06 - CFPB Rule', cutaways: [
+  ], statistics: {
+    main: '365 DAYS',
+    mainSubtitle: 'Grace period before reporting',
+    secondary: '<$500',
+    secondarySubtitle: 'Not reported at all'
+  }},
+  { sceneId: 'scene_06', sceneTitle: 'Scene 06 - CFPB Rule', duration: 17.66, cutaways: [
     { video: 'broll/government_building.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
     { video: 'broll/doctor_tablet.mp4', startTime: 9.5, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
-  ]},
-  { sceneId: 'scene_07', sceneTitle: 'Scene 07 - Why Matters', cutaways: [
+  ], statistics: {
+    main: '$49 BILLION',
+    mainSubtitle: 'Medical bills removed',
+    secondary: '15 Million',
+    secondarySubtitle: 'Americans affected'
+  }},
+  { sceneId: 'scene_07', sceneTitle: 'Scene 07 - Why Matters', duration: 16.69, cutaways: [
     { video: 'broll/doctor_tablet.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
     { video: 'broll/happy_family.mp4', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ]},
-  { sceneId: 'scene_08', sceneTitle: 'Scene 08 - Legal Challenges', cutaways: [
+  { sceneId: 'scene_08', sceneTitle: 'Scene 08 - Legal Challenges', duration: 15.62, cutaways: [
     { video: 'broll/courtroom.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
     { video: 'broll/government_building.mp4', startTime: 8.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ]},
-  { sceneId: 'scene_09', sceneTitle: 'Scene 09 - Check Your Report', cutaways: [
-    { video: 'https://www.pexels.com/video/946146/download', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'https://www.pexels.com/video/6801876/download', startTime: 8.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+  { sceneId: 'scene_09', sceneTitle: 'Scene 09 - Check Your Report', duration: 17.29, cutaways: [
+    { video: 'broll/person_typing.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: 'broll/reading_documents.mp4', startTime: 8.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ]},
-  { sceneId: 'scene_10', sceneTitle: 'Scene 10 - Disputing Errors', cutaways: [
-    { video: 'https://www.pexels.com/video/8060732/download', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
-    { video: 'https://www.pexels.com/video/852421/download', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+  { sceneId: 'scene_10', sceneTitle: 'Scene 10 - Disputing Errors', duration: 21.71, cutaways: [
+    { video: 'broll/writing_signing.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: 'broll/calendar_planning.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+  ], statistics: {
+    main: '80%',
+    mainSubtitle: 'Disputes result in changes',
+    secondary: '30 Days',
+    secondarySubtitle: 'Investigation deadline'
+  }},
+  { sceneId: 'scene_11', sceneTitle: 'Scene 11 - Document Everything', duration: 17.35, cutaways: [
+    { video: 'broll/organizing_papers.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: 'broll/filing_documents.mp4', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ]},
-  { sceneId: 'scene_11', sceneTitle: 'Scene 11 - Document Everything', cutaways: [
-    { video: 'https://www.pexels.com/video/6177732/download', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'https://www.pexels.com/video/6962434/download', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+  { sceneId: 'scene_12', sceneTitle: 'Scene 12 - Debt Over $500', duration: 23.56, cutaways: [
+    { video: 'broll/calculator_bills.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 0.9 },
+    { video: 'broll/money_payment.mp4', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+  ], statistics: {
+    main: '30%',
+    mainSubtitle: 'Medical bills contain errors'
+  }},
+  { sceneId: 'scene_13', sceneTitle: 'Scene 13 - Pay-for-Delete Strategy', duration: 18.31, cutaways: [
+    { video: 'broll/signing_agreement.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: 'broll/legal_documents.mp4', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
   ]},
-  { sceneId: 'scene_12', sceneTitle: 'Scene 12 - Debt Over $500', cutaways: [
-    { video: 'https://www.pexels.com/video/5981723/download', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 0.9 },
-    { video: 'https://www.pexels.com/video/9057559/download', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
-  ]},
-  { sceneId: 'scene_13', sceneTitle: 'Scene 13 - Pay-for-Delete Strategy', cutaways: [
-    { video: 'https://www.pexels.com/video/8814706/download', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'https://www.pexels.com/video/5923409/download', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
-  ]},
-  { sceneId: 'scene_14', sceneTitle: 'Scene 14 - Final Call to Action', cutaways: [
-    { video: 'https://www.pexels.com/video/6194810/download', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
-    { video: 'https://www.pexels.com/video/8134766/download', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
-  ]}
+  { sceneId: 'scene_14', sceneTitle: 'Scene 14 - Final Call to Action', duration: 20.92, cutaways: [
+    { video: 'broll/happy_relief.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: 'broll/success_achievement.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+  ], statistics: {
+    main: '+25 POINTS',
+    mainSubtitle: 'Potential score increase'
+  }}
 ];
 
 // CutawayConfig type for timeline editing
@@ -563,6 +604,30 @@ function App() {
         );
         setSceneCutaways(transformedScenes);
         console.log('[Project Load] Loaded and transformed scenes from database:', transformedScenes.length);
+
+        // Migration: Update project if it has fewer than 14 scenes
+        if (transformedScenes.length < 14) {
+          console.log('[Migration] Project has only', transformedScenes.length, 'scenes. Updating to 14 scenes...');
+          try {
+            await updateProject(currentProject.id, {
+              scenes: initialSceneCutaways,
+              description: `Educational video about medical debt on credit reports - 14 scenes with statistics and cutaways`
+            });
+            setSceneCutaways(initialSceneCutaways);
+            console.log('[Migration] Successfully updated project to 14 scenes');
+
+            // Also save any missing assets (scenes 9-14 stock videos)
+            for (const asset of initialBRollAssets) {
+              const existingAsset = dbAssets.find(a => a.id === asset.id || a.filename === asset.filename);
+              if (!existingAsset) {
+                await saveAsset(currentProject.id, appAssetToDbFormat(asset));
+                console.log('[Migration] Added missing asset:', asset.filename);
+              }
+            }
+          } catch (error) {
+            console.error('[Migration] Failed to update project:', error);
+          }
+        }
       } else {
         // Fall back to initial scenes
         setSceneCutaways(initialSceneCutaways);
