@@ -133,7 +133,7 @@ const initialBRollAssets: BRollAsset[] = [
   {
     id: 'stock_courtroom',
     filename: 'courtroom.mp4',
-    path: '/videos/stock/stock_pexels_6101348_1765420340756.mp4',
+    path: '/broll/courtroom.mp4',
     description: 'Stock video: Courtroom interior',
     status: 'pending',
     usedInScenes: ['Scene 08'],
@@ -144,7 +144,7 @@ const initialBRollAssets: BRollAsset[] = [
   {
     id: 'stock_calendar',
     filename: 'calendar_deadlines.mp4',
-    path: '/videos/stock/stock_pexels_7924459_1765420340333.mp4',
+    path: '/broll/calendar_deadlines.mp4',
     description: 'Stock video: Calendar with deadlines',
     status: 'pending',
     usedInScenes: [],
@@ -155,7 +155,7 @@ const initialBRollAssets: BRollAsset[] = [
   {
     id: 'stock_credit_report',
     filename: 'credit_report.mp4',
-    path: '/videos/stock/stock_pexels_8519382_1765420340903.mp4',
+    path: '/broll/credit_report.mp4',
     description: 'Stock video: Credit report document',
     status: 'pending',
     usedInScenes: [],
@@ -163,148 +163,136 @@ const initialBRollAssets: BRollAsset[] = [
     createdAt: new Date().toISOString(),
     versions: []
   },
-  // Stock videos for scenes 9-14 (Pexels)
+  // Stock videos for scenes 9-14 (Local files)
   {
     id: 'stock_person_typing',
     filename: 'person_typing.mp4',
-    path: 'https://www.pexels.com/video/946146/download',
+    path: '/broll/person_typing.mp4',
     description: 'Stock video: Person typing on keyboard',
     status: 'pending',
     usedInScenes: ['Scene 09'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/946146/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_credit_score_check',
     filename: 'credit_score_check.mp4',
-    path: 'https://www.pexels.com/video/6801876/download',
-    description: 'Stock video: Checking credit score on computer (Pexels 6801876)',
+    path: '/broll/credit_score.mp4',
+    description: 'Stock video: Checking credit score on computer',
     status: 'pending',
     usedInScenes: ['Scene 09'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/6801876/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_filling_form',
     filename: 'filling_form.mp4',
-    path: 'https://www.pexels.com/video/8060732/download',
-    description: 'Stock video: Person filling up a form (Pexels 8060732)',
+    path: '/broll/filing_documents.mp4',
+    description: 'Stock video: Person filling up a form',
     status: 'pending',
     usedInScenes: ['Scene 10'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/8060732/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_typing_fast',
     filename: 'typing_fast.mp4',
-    path: 'https://www.pexels.com/video/852421/download',
-    description: 'Stock video: Person typing fast (Pexels 852421)',
+    path: '/broll/person_typing.mp4',
+    description: 'Stock video: Person typing fast',
     status: 'pending',
     usedInScenes: ['Scene 10'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/852421/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_arranging_documents',
     filename: 'arranging_documents.mp4',
-    path: 'https://www.pexels.com/video/6177732/download',
-    description: 'Stock video: Person arranging documents at office desk (Pexels 6177732)',
+    path: '/broll/organizing_papers.mp4',
+    description: 'Stock video: Person arranging documents at office desk',
     status: 'pending',
     usedInScenes: ['Scene 11'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/6177732/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_paper_printing',
     filename: 'paper_printing.mp4',
-    path: 'https://www.pexels.com/video/6962434/download',
-    description: 'Stock video: Paper printing office documents (Pexels 6962434)',
+    path: '/broll/documents_paperwork.mp4',
+    description: 'Stock video: Paper printing office documents',
     status: 'pending',
     usedInScenes: ['Scene 11'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/6962434/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_worried_budgeting',
     filename: 'worried_budgeting.mp4',
-    path: 'https://www.pexels.com/video/5981723/download',
-    description: 'Stock video: Woman worries in money budgeting (Pexels 5981723)',
+    path: '/broll/worried_bills.mp4',
+    description: 'Stock video: Woman worries in money budgeting',
     status: 'pending',
     usedInScenes: ['Scene 12'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/5981723/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_marking_calendar',
     filename: 'marking_calendar.mp4',
-    path: 'https://www.pexels.com/video/9057559/download',
-    description: 'Stock video: Person marking on calendar (Pexels 9057559)',
+    path: '/broll/calendar_planning.mp4',
+    description: 'Stock video: Person marking on calendar',
     status: 'pending',
     usedInScenes: ['Scene 12'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/9057559/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_signing_agreement',
     filename: 'signing_agreement.mp4',
-    path: 'https://www.pexels.com/video/8814706/download',
-    description: 'Stock video: Person signing an agreement (Pexels 8814706)',
+    path: '/broll/signing_agreement.mp4',
+    description: 'Stock video: Person signing an agreement',
     status: 'pending',
     usedInScenes: ['Scene 13'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/8814706/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_signing_contract',
     filename: 'signing_contract.mp4',
-    path: 'https://www.pexels.com/video/5923409/download',
-    description: 'Stock video: Person signing a contract (Pexels 5923409)',
+    path: '/broll/signing_document.mp4',
+    description: 'Stock video: Person signing a contract',
     status: 'pending',
     usedInScenes: ['Scene 13'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/5923409/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_celebrating_success',
     filename: 'celebrating_success.mp4',
-    path: 'https://www.pexels.com/video/6194810/download',
-    description: 'Stock video: Man celebrating success (Pexels 6194810)',
+    path: '/broll/success_achievement.mp4',
+    description: 'Stock video: Man celebrating success',
     status: 'pending',
     usedInScenes: ['Scene 14'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/6194810/download',
     createdAt: new Date().toISOString(),
     versions: []
   },
   {
     id: 'stock_people_celebrating',
     filename: 'people_celebrating.mp4',
-    path: 'https://www.pexels.com/video/8134766/download',
-    description: 'Stock video: People celebrating success (Pexels 8134766)',
+    path: '/broll/happy_relief.mp4',
+    description: 'Stock video: People celebrating success',
     status: 'pending',
     usedInScenes: ['Scene 14'],
     source: 'pexels',
-    videoUrl: 'https://www.pexels.com/video/8134766/download',
     createdAt: new Date().toISOString(),
     versions: []
   }
@@ -605,8 +593,9 @@ function App() {
         setSceneCutaways(transformedScenes);
         console.log('[Project Load] Loaded and transformed scenes from database:', transformedScenes.length);
 
-        // Migration: Update project if it has fewer than 14 scenes
-        if (transformedScenes.length < 14) {
+        // Migration: DISABLED - was causing 1-minute page loads
+        // This migration only needs to run once, and the project should already have 14 scenes
+        if (false && transformedScenes.length < 14) {
           console.log('[Migration] Project has only', transformedScenes.length, 'scenes. Updating to 14 scenes...');
           try {
             await updateProject(currentProject.id, {

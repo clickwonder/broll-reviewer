@@ -7,8 +7,8 @@ export default defineConfig({
     port: 3001,
     open: true,
     watch: {
-      usePolling: true,
-      interval: 100,
+      usePolling: false,
+      ignored: ['**/public/scenes/**', '**/public/broll/**']
     },
     proxy: {
       '/api/pexels': {
