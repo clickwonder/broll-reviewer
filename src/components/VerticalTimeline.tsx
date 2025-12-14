@@ -38,43 +38,27 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
   const [triggerInsertModal, setTriggerInsertModal] = useState<{ sceneId: string; time: number } | null>(null);
 
   const getAssetFromPath = (path: string): BRollAsset | undefined => {
-    console.log(`[VerticalTimeline getAssetFromPath] Looking for path: "${path}"`);
-
-    // Try to match by full path first
+    // First try exact match by path or videoUrl
     let asset = assets.find(a => a.path === path || a.videoUrl === path);
-    if (asset) {
-      console.log(`[VerticalTimeline] ✅ Found by full path:`, {
-        id: asset.id,
-        filename: asset.filename,
-        status: asset.status,
-        path: asset.path
-      });
-      return asset;
+
+    // If no exact match, try matching by filename extracted from path
+    if (!asset && path) {
+      const filename = path.split('/').pop(); // Get filename from path like "/broll/credit_report.mp4"
+      if (filename) {
+        asset = assets.find(a =>
+          a.filename === filename ||
+          a.path?.endsWith(`/${filename}`) ||
+          a.videoUrl?.endsWith(`/${filename}`)
+        );
+        if (asset) {
+          console.log(`[VerticalTimeline] ✓ Matched asset by filename: "${filename}" -> ${asset.path}`);
+        }
+      }
     }
 
-    // Try to match by filename as fallback
-    const filename = path.split('/').pop();
-    console.log(`[VerticalTimeline] Trying filename match: "${filename}"`);
-    asset = assets.find(a =>
-      a.filename === filename ||
-      a.path?.split('/').pop() === filename ||
-      a.videoUrl?.split('/').pop() === filename
-    );
-
-    if (asset) {
-      console.log(`[VerticalTimeline] ✅ Found by filename:`, {
-        id: asset.id,
-        filename: asset.filename,
-        status: asset.status,
-        path: asset.path
-      });
-    } else {
-      console.log(`[VerticalTimeline] ❌ NOT FOUND for: "${path}"`);
-      console.log(`[VerticalTimeline] Available assets:`, assets.map(a => ({
-        filename: a.filename,
-        path: a.path,
-        status: a.status
-      })));
+    if (!asset) {
+      console.log(`[VerticalTimeline] ⚠️ No asset found for path: "${path}"`);
+      console.log(`[VerticalTimeline] Available assets:`, assets.map(a => ({ path: a.path, filename: a.filename })));
     }
 
     return asset;
@@ -779,7 +763,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
               {/* Single combined video */}
               <video
                 ref={videoRef}
-                src="http://localhost:8888/scenes/full_video.mp4"
+                src="/scenes/full_video.mp4"
                 playsInline
                 preload="auto"
                 style={{
@@ -845,7 +829,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                 <video
                   key={`cutaway-${activeCutawayAsset.id}-${activeCutawayAsset.path}`}
                   ref={cutawayVideoRef}
-                  src={activeCutawayAsset.path.startsWith('/broll/') ? `http://localhost:8888${activeCutawayAsset.path}` : activeCutawayAsset.path}
+                  src={activeCutawayAsset.path}
                   style={{
                     width: '100%',
                     height: '100%',
