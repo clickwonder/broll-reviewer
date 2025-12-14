@@ -4,6 +4,9 @@ import { StockBrowser } from './StockBrowser';
 import { generateBRoll, ImageModel, VideoModel, GenerationProgress } from '../services/kieService';
 import { downloadAndSaveStockVideo, StockVideoInfo, DownloadProgress } from '../services/stockStorageService';
 import { SCENE_SEEK_TIMES, getCurrentScene } from '../sceneSeekTimes';
+import { CaptionOverlay } from './CaptionOverlay';
+import { CaptionPage, createCaptionPages } from '../utils/captions';
+import { getCaptionsForScene, defaultCaptionStyle } from '../config/captions.config';
 
 interface CutawayUpdate {
   startTime?: number;
@@ -35,19 +38,44 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
   const [triggerInsertModal, setTriggerInsertModal] = useState<{ sceneId: string; time: number } | null>(null);
 
   const getAssetFromPath = (path: string): BRollAsset | undefined => {
+    console.log(`[VerticalTimeline getAssetFromPath] Looking for path: "${path}"`);
+
     // Try to match by full path first
     let asset = assets.find(a => a.path === path || a.videoUrl === path);
     if (asset) {
+      console.log(`[VerticalTimeline] ✅ Found by full path:`, {
+        id: asset.id,
+        filename: asset.filename,
+        status: asset.status,
+        path: asset.path
+      });
       return asset;
     }
 
     // Try to match by filename as fallback
     const filename = path.split('/').pop();
+    console.log(`[VerticalTimeline] Trying filename match: "${filename}"`);
     asset = assets.find(a =>
       a.filename === filename ||
       a.path?.split('/').pop() === filename ||
       a.videoUrl?.split('/').pop() === filename
     );
+
+    if (asset) {
+      console.log(`[VerticalTimeline] ✅ Found by filename:`, {
+        id: asset.id,
+        filename: asset.filename,
+        status: asset.status,
+        path: asset.path
+      });
+    } else {
+      console.log(`[VerticalTimeline] ❌ NOT FOUND for: "${path}"`);
+      console.log(`[VerticalTimeline] Available assets:`, assets.map(a => ({
+        filename: a.filename,
+        path: a.path,
+        status: a.status
+      })));
+    }
 
     return asset;
   };
@@ -65,6 +93,16 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
     cumulativeTime += sceneDuration;
     return { ...scene, sceneStart, sceneDuration };
   });
+
+  // Debug: Log scenes and cutaways on mount
+  React.useEffect(() => {
+    console.log(`[VerticalTimeline] Loaded ${scenes.length} scenes`);
+    scenes.forEach((scene, idx) => {
+      if (scene.cutaways && scene.cutaways.length > 0) {
+        console.log(`[VerticalTimeline] ${scene.sceneId}: ${scene.cutaways.length} cutaways`, scene.cutaways.map(c => c.video));
+      }
+    });
+  }, [scenes]);
 
   const totalDuration = cumulativeTime;
 
@@ -235,6 +273,8 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   const [previewHeight, setPreviewHeight] = useState(480); // Default height in pixels
   const [isResizing, setIsResizing] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [captionPages, setCaptionPages] = useState<CaptionPage[]>([]);
+  const [showCaptions, setShowCaptions] = useState(true);
 
   const startYRef = useRef<number>(0);
   const startHeightRef = useRef<number>(0);
@@ -372,6 +412,43 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
     };
   }, [isResizing]);
 
+  // Load captions when active scene changes
+  useEffect(() => {
+    if (!activeScene) {
+      setCaptionPages([]);
+      return;
+    }
+
+    const sceneCaptions = getCaptionsForScene(activeScene);
+    if (sceneCaptions && sceneCaptions.captions.length > 0) {
+      // Group words into pages of 6-7 words max (TikTok style)
+      const allTokens = sceneCaptions.captions.map(cue => ({
+        text: cue.text,
+        startMs: cue.startMs,
+        endMs: cue.endMs,
+      }));
+
+      const pages: CaptionPage[] = [];
+      const MAX_WORDS_PER_PAGE = 7;
+
+      for (let i = 0; i < allTokens.length; i += MAX_WORDS_PER_PAGE) {
+        const pageTokens = allTokens.slice(i, i + MAX_WORDS_PER_PAGE);
+
+        pages.push({
+          id: pages.length,
+          text: pageTokens.map(t => t.text).join(' '),
+          tokens: pageTokens,
+          startMs: pageTokens[0].startMs,
+          endMs: pageTokens[pageTokens.length - 1].endMs,
+        });
+      }
+
+      setCaptionPages(pages);
+    } else {
+      setCaptionPages([]);
+    }
+  }, [activeScene]);
+
   const handleResizeStart = (e: React.MouseEvent) => {
     startYRef.current = e.clientY;
     startHeightRef.current = previewHeight;
@@ -397,6 +474,15 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
   const seekTo = (time: number) => {
     if (videoRef.current) {
+      const wasPlaying = isPlaying;
+
+      // Pause video before seeking to prevent race conditions
+      if (wasPlaying) {
+        videoRef.current.pause();
+        if (cutawayVideoRef.current) cutawayVideoRef.current.pause();
+      }
+
+      // Set new time
       videoRef.current.currentTime = time;
       setCurrentTime(time);
 
@@ -405,6 +491,19 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
       if (scene) {
         const sceneId = `scene_${String(scene.sceneIndex).padStart(2, '0')}`;
         setActiveScene(sceneId);
+      }
+
+      // Resume playback if it was playing before
+      if (wasPlaying) {
+        // Use requestAnimationFrame to ensure DOM has updated
+        requestAnimationFrame(() => {
+          if (videoRef.current) {
+            videoRef.current.play().catch(err => console.error('[SEEK] Play error:', err));
+            if (cutawayVideoRef.current && showWithCutaways && activeCutawayAsset) {
+              cutawayVideoRef.current.play().catch(err => console.error('[SEEK] Cutaway play error:', err));
+            }
+          }
+        });
       }
     }
   };
@@ -504,38 +603,75 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
           {/* Toggle switch for with/without cutaways */}
           {!isCollapsed && (
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <button
-                onClick={() => setShowWithCutaways(false)}
-                style={{
-                  padding: '8px 16px',
-                  background: !showWithCutaways ? '#3b82f6' : 'transparent',
-                  border: `1px solid ${!showWithCutaways ? '#3b82f6' : '#475569'}`,
-                  borderRadius: '6px 0 0 6px',
-                  color: !showWithCutaways ? '#fff' : '#94a3b8',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer'
-                }}
-              >
-                Base Scenes Only
-              </button>
-              <button
-                onClick={() => setShowWithCutaways(true)}
-                style={{
-                  padding: '8px 16px',
-                  background: showWithCutaways ? '#3b82f6' : 'transparent',
-                  border: `1px solid ${showWithCutaways ? '#3b82f6' : '#475569'}`,
-                  borderRadius: '0 6px 6px 0',
-                  marginLeft: '-1px',
-                  color: showWithCutaways ? '#fff' : '#94a3b8',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer'
-                }}
-              >
-                With B-Roll Cutaways
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex' }}>
+                <button
+                  onClick={() => setShowWithCutaways(false)}
+                  style={{
+                    padding: '8px 16px',
+                    background: !showWithCutaways ? '#3b82f6' : 'transparent',
+                    border: `1px solid ${!showWithCutaways ? '#3b82f6' : '#475569'}`,
+                    borderRadius: '6px 0 0 6px',
+                    color: !showWithCutaways ? '#fff' : '#94a3b8',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Base Scenes Only
+                </button>
+                <button
+                  onClick={() => setShowWithCutaways(true)}
+                  style={{
+                    padding: '8px 16px',
+                    background: showWithCutaways ? '#3b82f6' : 'transparent',
+                    border: `1px solid ${showWithCutaways ? '#3b82f6' : '#475569'}`,
+                    borderRadius: '0 6px 6px 0',
+                    marginLeft: '-1px',
+                    color: showWithCutaways ? '#fff' : '#94a3b8',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  With B-Roll Cutaways
+                </button>
+              </div>
+
+              {/* Captions toggle */}
+              <div style={{ display: 'flex' }}>
+                <button
+                  onClick={() => setShowCaptions(false)}
+                  style={{
+                    padding: '8px 16px',
+                    background: !showCaptions ? '#10b981' : 'transparent',
+                    border: `1px solid ${!showCaptions ? '#10b981' : '#475569'}`,
+                    borderRadius: '6px 0 0 6px',
+                    color: !showCaptions ? '#fff' : '#94a3b8',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Captions Off
+                </button>
+                <button
+                  onClick={() => setShowCaptions(true)}
+                  style={{
+                    padding: '8px 16px',
+                    background: showCaptions ? '#10b981' : 'transparent',
+                    border: `1px solid ${showCaptions ? '#10b981' : '#475569'}`,
+                    borderRadius: '0 6px 6px 0',
+                    marginLeft: '-1px',
+                    color: showCaptions ? '#fff' : '#94a3b8',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Captions On
+                </button>
+              </div>
             </div>
           )}
 
@@ -593,7 +729,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
               {/* Single combined video */}
               <video
                 ref={videoRef}
-                src="http://localhost:8888/preview_720p.mp4"
+                src="http://localhost:8888/scenes/full_video.mp4"
                 playsInline
                 preload="auto"
                 style={{
@@ -616,14 +752,22 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                       setActiveScene(sceneId);
 
                       // Check if we're in a cutaway
+                      console.log(`[TIME UPDATE] Video time: ${videoRef.current.currentTime.toFixed(2)}s, Scene: ${sceneId}, Scene start: ${scene.startTime}s`);
                       const sceneLocalTime = videoRef.current.currentTime - scene.startTime;
+                      console.log(`[SCENE TIME] Local time: ${sceneLocalTime.toFixed(2)}s`);
+
                       let foundCutaway = false;
                       const currentScene = scenes.find(s => s.sceneId === sceneId);
+                      console.log(`[SCENE LOOKUP] Found scene: ${!!currentScene}, Has cutaways: ${!!currentScene?.cutaways}, Count: ${currentScene?.cutaways?.length || 0}`);
+
                       if (currentScene && currentScene.cutaways) {
                         for (const cutaway of currentScene.cutaways) {
+                          console.log(`[CHECKING CUTAWAY] Video: ${cutaway.video}, Start: ${cutaway.startTime}s, End: ${(cutaway.startTime + cutaway.duration).toFixed(2)}s, Current: ${sceneLocalTime.toFixed(2)}s`);
                           if (sceneLocalTime >= cutaway.startTime && sceneLocalTime < cutaway.startTime + cutaway.duration) {
+                            console.log(`[CUTAWAY ACTIVE] Scene: ${sceneId}, Time: ${sceneLocalTime.toFixed(2)}s, Video: ${cutaway.video}`);
                             setActiveCutaway(cutaway.video);
                             const asset = getAssetFromPath(cutaway.video);
+                            console.log(`[CUTAWAY ASSET] ${asset ? `Found: ${asset.id} - ${asset.path}` : 'NOT FOUND'}`);
                             setActiveCutawayAsset(asset || null);
                             foundCutaway = true;
                             break;
@@ -696,6 +840,28 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* TikTok-style Captions */}
+              {showCaptions && captionPages.length > 0 && (() => {
+                // Calculate scene-relative time for captions
+                const scene = getCurrentScene(currentTime);
+                const sceneRelativeTime = scene ? (currentTime - scene.startTime) * 1000 : 0;
+
+                return (
+                  <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
+                    <CaptionOverlay
+                      pages={captionPages}
+                      currentTimeMs={sceneRelativeTime}
+                      containerHeight={previewHeight}
+                      style={{
+                        ...defaultCaptionStyle,
+                        // Get custom style from scene config if available
+                        ...(activeScene && getCaptionsForScene(activeScene)?.style),
+                      }}
+                    />
+                  </div>
+                );
+              })()}
 
               {/* Current Time Badge */}
               <div style={{
