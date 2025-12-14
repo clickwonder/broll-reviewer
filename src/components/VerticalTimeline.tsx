@@ -278,6 +278,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
   const startYRef = useRef<number>(0);
   const startHeightRef = useRef<number>(0);
+  const prevTimeRef = useRef<number>(0); // Track previous time to detect unexpected jumps
 
   // Full timeline drag state
   const cutawayTimelineRef = useRef<HTMLDivElement>(null);
@@ -458,11 +459,14 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
 
   const togglePlay = () => {
+    console.log(`[TOGGLE PLAY] Called. isPlaying: ${isPlaying}, currentTime: ${videoRef.current?.currentTime.toFixed(2)}s`);
     if (videoRef.current) {
       if (isPlaying) {
+        console.log('[TOGGLE PLAY] Pausing video');
         videoRef.current.pause();
         if (cutawayVideoRef.current) cutawayVideoRef.current.pause();
       } else {
+        console.log('[TOGGLE PLAY] Playing video');
         videoRef.current.play();
         if (cutawayVideoRef.current && showWithCutaways && activeCutawayAsset) {
           cutawayVideoRef.current.play();
@@ -473,31 +477,77 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   };
 
   const seekTo = (time: number) => {
+    console.log(`[SEEKTO] Called with time: ${time.toFixed(2)}s, current: ${videoRef.current?.currentTime.toFixed(2)}s, isPlaying: ${isPlaying}`);
+
     if (videoRef.current) {
+      const video = videoRef.current;
       const wasPlaying = isPlaying;
+      const oldTime = video.currentTime;
+
+      // Diagnose video state
+      const readyStateNames = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAVE_FUTURE_DATA', 'HAVE_ENOUGH_DATA'];
+      const networkStateNames = ['NETWORK_EMPTY', 'NETWORK_IDLE', 'NETWORK_LOADING', 'NETWORK_NO_SOURCE'];
+      console.log(`[SEEKTO DIAG] readyState: ${video.readyState} (${readyStateNames[video.readyState]})`);
+      console.log(`[SEEKTO DIAG] networkState: ${video.networkState} (${networkStateNames[video.networkState]})`);
+      console.log(`[SEEKTO DIAG] duration: ${video.duration}s`);
+      console.log(`[SEEKTO DIAG] src: ${video.src}`);
+
+      // Check seekable ranges
+      const seekable = video.seekable;
+      if (seekable.length === 0) {
+        console.error(`[SEEKTO ERROR] No seekable ranges! Video may not be loaded.`);
+      } else {
+        for (let i = 0; i < seekable.length; i++) {
+          console.log(`[SEEKTO DIAG] Seekable range ${i}: ${seekable.start(i).toFixed(2)}s - ${seekable.end(i).toFixed(2)}s`);
+        }
+        // Check if target time is within seekable range
+        let canSeek = false;
+        for (let i = 0; i < seekable.length; i++) {
+          if (time >= seekable.start(i) && time <= seekable.end(i)) {
+            canSeek = true;
+            break;
+          }
+        }
+        if (!canSeek) {
+          console.error(`[SEEKTO ERROR] Target time ${time.toFixed(2)}s is NOT in any seekable range!`);
+        }
+      }
 
       // Pause video before seeking to prevent race conditions
       if (wasPlaying) {
-        videoRef.current.pause();
+        console.log('[SEEKTO] Pausing video before seek');
+        video.pause();
         if (cutawayVideoRef.current) cutawayVideoRef.current.pause();
       }
 
       // Set new time
-      videoRef.current.currentTime = time;
+      console.log(`[SEEKTO] Setting currentTime from ${oldTime.toFixed(2)}s to ${time.toFixed(2)}s`);
+      video.currentTime = time;
       setCurrentTime(time);
+
+      // Verify the time was actually set
+      setTimeout(() => {
+        console.log(`[SEEKTO VERIFY] After 100ms, video currentTime is: ${videoRef.current?.currentTime.toFixed(2)}s`);
+        if (videoRef.current && Math.abs(videoRef.current.currentTime - time) > 1) {
+          console.error(`[SEEKTO FAILED] Seek to ${time.toFixed(2)}s failed! Video is at ${videoRef.current.currentTime.toFixed(2)}s`);
+        }
+      }, 100);
 
       // Update active scene
       const scene = getCurrentScene(time);
       if (scene) {
         const sceneId = `scene_${String(scene.sceneIndex).padStart(2, '0')}`;
+        console.log(`[SEEKTO] Setting active scene to: ${sceneId}`);
         setActiveScene(sceneId);
       }
 
       // Resume playback if it was playing before
       if (wasPlaying) {
+        console.log('[SEEKTO] Will resume playback in requestAnimationFrame');
         // Use requestAnimationFrame to ensure DOM has updated
         requestAnimationFrame(() => {
           if (videoRef.current) {
+            console.log(`[SEEKTO RAF] Resuming playback at time: ${videoRef.current.currentTime.toFixed(2)}s`);
             videoRef.current.play().catch(err => console.error('[SEEK] Play error:', err));
             if (cutawayVideoRef.current && showWithCutaways && activeCutawayAsset) {
               cutawayVideoRef.current.play().catch(err => console.error('[SEEK] Cutaway play error:', err));
@@ -743,31 +793,35 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                 }}
                 onTimeUpdate={() => {
                   if (videoRef.current) {
-                    setCurrentTime(videoRef.current.currentTime);
+                    const newTime = videoRef.current.currentTime;
+                    const prevTime = prevTimeRef.current;
+
+                    // Detect unexpected jumps backwards (more than 2 seconds back, excluding small rewinds)
+                    if (prevTime > 5 && newTime < 2 && (prevTime - newTime) > 3) {
+                      console.error(`[TIME JUMP DETECTED] Video jumped from ${prevTime.toFixed(2)}s to ${newTime.toFixed(2)}s! This is the bug!`);
+                      console.trace('[TIME JUMP STACK TRACE]');
+                    }
+                    prevTimeRef.current = newTime;
+
+                    setCurrentTime(newTime);
 
                     // Update active scene based on current time
-                    const scene = getCurrentScene(videoRef.current.currentTime);
+                    const scene = getCurrentScene(newTime);
                     if (scene) {
                       const sceneId = `scene_${String(scene.sceneIndex).padStart(2, '0')}`;
                       setActiveScene(sceneId);
 
-                      // Check if we're in a cutaway
-                      console.log(`[TIME UPDATE] Video time: ${videoRef.current.currentTime.toFixed(2)}s, Scene: ${sceneId}, Scene start: ${scene.startTime}s`);
+                      // Check if we're in a cutaway (logging reduced to avoid spam)
                       const sceneLocalTime = videoRef.current.currentTime - scene.startTime;
-                      console.log(`[SCENE TIME] Local time: ${sceneLocalTime.toFixed(2)}s`);
 
                       let foundCutaway = false;
                       const currentScene = scenes.find(s => s.sceneId === sceneId);
-                      console.log(`[SCENE LOOKUP] Found scene: ${!!currentScene}, Has cutaways: ${!!currentScene?.cutaways}, Count: ${currentScene?.cutaways?.length || 0}`);
 
                       if (currentScene && currentScene.cutaways) {
                         for (const cutaway of currentScene.cutaways) {
-                          console.log(`[CHECKING CUTAWAY] Video: ${cutaway.video}, Start: ${cutaway.startTime}s, End: ${(cutaway.startTime + cutaway.duration).toFixed(2)}s, Current: ${sceneLocalTime.toFixed(2)}s`);
                           if (sceneLocalTime >= cutaway.startTime && sceneLocalTime < cutaway.startTime + cutaway.duration) {
-                            console.log(`[CUTAWAY ACTIVE] Scene: ${sceneId}, Time: ${sceneLocalTime.toFixed(2)}s, Video: ${cutaway.video}`);
                             setActiveCutaway(cutaway.video);
                             const asset = getAssetFromPath(cutaway.video);
-                            console.log(`[CUTAWAY ASSET] ${asset ? `Found: ${asset.id} - ${asset.path}` : 'NOT FOUND'}`);
                             setActiveCutawayAsset(asset || null);
                             foundCutaway = true;
                             break;
@@ -919,7 +973,11 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                 {scenes.map((scene, idx) => (
                   <div
                     key={scene.sceneId || `scene-marker-${idx}`}
-                    onClick={() => seekTo(scene.sceneStart)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log(`[SCENE MARKER CLICK] Scene ${idx + 1} (${scene.sceneId}), seeking to ${scene.sceneStart.toFixed(2)}s`);
+                      seekTo(scene.sceneStart);
+                    }}
                     style={{
                       position: 'absolute',
                       left: `${(scene.sceneStart / totalDuration) * 100}%`,
