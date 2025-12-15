@@ -17,8 +17,8 @@ const PORT = 3002;
 app.use(cors());
 app.use(express.json());
 
-// Directory for storing stock videos
-const STOCK_VIDEO_DIR = path.join(__dirname, 'public', 'videos', 'stock');
+// Directory for storing stock videos (same as B-roll for consistency)
+const STOCK_VIDEO_DIR = path.join(__dirname, 'public', 'broll');
 
 // Ensure directory exists
 if (!fs.existsSync(STOCK_VIDEO_DIR)) {
@@ -97,7 +97,7 @@ app.post('/api/download-stock-video', async (req, res) => {
     await downloadFile(url, filename);
 
     // Return the local URL (relative to public folder)
-    const localUrl = `/videos/stock/${filename}`;
+    const localUrl = `/broll/${filename}`;
 
     console.log(`Downloaded successfully: ${localUrl}`);
 
@@ -143,7 +143,7 @@ app.post('/api/download-batch', async (req, res) => {
 
         await downloadFile(url, filename);
 
-        const localUrl = `/videos/stock/${filename}`;
+        const localUrl = `/broll/${filename}`;
         results.set(url, localUrl);
 
         console.log(`[${i + 1}/${videos.length}] Success: ${localUrl}`);
