@@ -1,0 +1,22 @@
+[
+  {
+    "session_id": "4244c279-5b48-4a39-9679-fd7de4776f3c",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/4244c279-5b48-4a39-9679-fd7de4776f3c.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer/public/scenes",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a56a568",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a56a568.jsonl"
+  },
+  {
+    "session_id": "4244c279-5b48-4a39-9679-fd7de4776f3c",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/4244c279-5b48-4a39-9679-fd7de4776f3c.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer/public/scenes",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a8d2128",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a8d2128.jsonl"
+  }
+]

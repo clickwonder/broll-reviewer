@@ -305,12 +305,12 @@ const initialBRollAssets: BRollAsset[] = [
 // Scene 13: 18.31s, Scene 14: 20.92s
 const initialSceneCutaways: SceneCutaway[] = [
   { sceneId: 'scene_01', sceneTitle: 'Scene 01 - Medical Debt Title', duration: 10.24, cutaways: [
-    { video: 'broll/worried_bills.mp4', startTime: 0.5, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/credit_report.mp4', startTime: 5.5, duration: 3.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: '/broll/worried_bills.mp4', startTime: 0.5, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: '/broll/credit_report.mp4', startTime: 5.5, duration: 3.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ]},
   { sceneId: 'scene_02', sceneTitle: 'Scene 02 - Scope of Problem', duration: 14.08, cutaways: [
-    { video: 'broll/worried_bills.mp4', startTime: 1.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
-    { video: 'broll/signing_document.mp4', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: '/broll/worried_bills.mp4', startTime: 1.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: '/broll/signing_document.mp4', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ], statistics: {
     main: '20 MILLION',
     mainSubtitle: 'Americans owe medical debt',
@@ -318,8 +318,8 @@ const initialSceneCutaways: SceneCutaway[] = [
     secondarySubtitle: 'Median amount in collections'
   }},
   { sceneId: 'scene_03', sceneTitle: 'Scene 03 - April 2023', duration: 19.49, cutaways: [
-    { video: 'broll/happy_family.mp4', startTime: 2.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/calendar_deadlines.mp4', startTime: 10.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: '/broll/happy_family.mp4', startTime: 2.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: '/broll/calendar_deadlines.mp4', startTime: 10.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ], statistics: {
     main: '70%',
     mainSubtitle: 'Medical debt removed',
@@ -327,8 +327,8 @@ const initialSceneCutaways: SceneCutaway[] = [
     secondarySubtitle: 'People affected April 2023'
   }},
   { sceneId: 'scene_04', sceneTitle: 'Scene 04 - Credit Score', duration: 14.18, cutaways: [
-    { video: 'broll/credit_report.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/happy_family.mp4', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
+    { video: '/broll/credit_report.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: '/broll/happy_family.mp4', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
   ], statistics: {
     main: '+25 POINTS',
     mainSubtitle: 'Average credit score increase',
@@ -336,8 +336,8 @@ const initialSceneCutaways: SceneCutaway[] = [
     secondarySubtitle: 'Typical score improvement'
   }},
   { sceneId: 'scene_05', sceneTitle: 'Scene 05 - Current Rules', duration: 17.71, cutaways: [
-    { video: 'broll/signing_document.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/calendar_deadlines.mp4', startTime: 9.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+    { video: '/broll/signing_document.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: '/broll/calendar_deadlines.mp4', startTime: 9.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ], statistics: {
     main: '365 DAYS',
     mainSubtitle: 'Grace period before reporting',
@@ -345,8 +345,8 @@ const initialSceneCutaways: SceneCutaway[] = [
     secondarySubtitle: 'Not reported at all'
   }},
   { sceneId: 'scene_06', sceneTitle: 'Scene 06 - CFPB Rule', duration: 17.66, cutaways: [
-    { video: 'broll/government_building.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/doctor_tablet.mp4', startTime: 9.5, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: '/broll/government_building.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: '/broll/doctor_tablet.mp4', startTime: 9.5, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ], statistics: {
     main: '$49 BILLION',
     mainSubtitle: 'Medical bills removed',
@@ -354,20 +354,20 @@ const initialSceneCutaways: SceneCutaway[] = [
     secondarySubtitle: 'Americans affected'
   }},
   { sceneId: 'scene_07', sceneTitle: 'Scene 07 - Why Matters', duration: 16.69, cutaways: [
-    { video: 'broll/doctor_tablet.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
-    { video: 'broll/happy_family.mp4', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: '/broll/doctor_tablet.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: '/broll/happy_family.mp4', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ]},
   { sceneId: 'scene_08', sceneTitle: 'Scene 08 - Legal Challenges', duration: 15.62, cutaways: [
-    { video: 'broll/courtroom.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/government_building.mp4', startTime: 8.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+    { video: '/broll/courtroom.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: '/broll/government_building.mp4', startTime: 8.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ]},
   { sceneId: 'scene_09', sceneTitle: 'Scene 09 - Check Your Report', duration: 17.29, cutaways: [
-    { video: 'broll/person_typing.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/reading_documents.mp4', startTime: 8.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: '/broll/person_typing.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: '/broll/reading_documents.mp4', startTime: 8.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ]},
   { sceneId: 'scene_10', sceneTitle: 'Scene 10 - Disputing Errors', duration: 21.71, cutaways: [
-    { video: 'broll/writing_signing.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
-    { video: 'broll/calendar_planning.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: '/broll/writing_signing.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: '/broll/calendar_planning.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ], statistics: {
     main: '80%',
     mainSubtitle: 'Disputes result in changes',
@@ -375,23 +375,23 @@ const initialSceneCutaways: SceneCutaway[] = [
     secondarySubtitle: 'Investigation deadline'
   }},
   { sceneId: 'scene_11', sceneTitle: 'Scene 11 - Document Everything', duration: 17.35, cutaways: [
-    { video: 'broll/organizing_papers.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/filing_documents.mp4', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+    { video: '/broll/organizing_papers.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: '/broll/filing_documents.mp4', startTime: 7.5, duration: 3.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ]},
   { sceneId: 'scene_12', sceneTitle: 'Scene 12 - Debt Over $500', duration: 23.56, cutaways: [
-    { video: 'broll/calculator_bills.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 0.9 },
-    { video: 'broll/money_payment.mp4', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
+    { video: '/broll/calculator_bills.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 0.9 },
+    { video: '/broll/money_payment.mp4', startTime: 9.0, duration: 3.5, style: 'fullscreen', videoStartTime: 0, playbackRate: 1 }
   ], statistics: {
     main: '30%',
     mainSubtitle: 'Medical bills contain errors'
   }},
   { sceneId: 'scene_13', sceneTitle: 'Scene 13 - Pay-for-Delete Strategy', duration: 18.31, cutaways: [
-    { video: 'broll/signing_agreement.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
-    { video: 'broll/legal_documents.mp4', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
+    { video: '/broll/signing_agreement.mp4', startTime: 1.5, duration: 4.0, style: 'fullscreen', videoStartTime: 0, playbackRate: 0.9 },
+    { video: '/broll/legal_documents.mp4', startTime: 8.0, duration: 3.5, style: 'fullscreen', videoStartTime: 2, playbackRate: 1 }
   ]},
   { sceneId: 'scene_14', sceneTitle: 'Scene 14 - Final Call to Action', duration: 20.92, cutaways: [
-    { video: 'broll/happy_relief.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
-    { video: 'broll/success_achievement.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
+    { video: '/broll/happy_relief.mp4', startTime: 1.5, duration: 4.5, style: 'fullscreen', videoStartTime: 1, playbackRate: 0.9 },
+    { video: '/broll/success_achievement.mp4', startTime: 9.0, duration: 4.0, style: 'fullscreen', videoStartTime: 1, playbackRate: 1 }
   ], statistics: {
     main: '+25 POINTS',
     mainSubtitle: 'Potential score increase'
@@ -590,8 +590,33 @@ function App() {
           currentProject.scenes as unknown as Parameters<typeof transformDBScenesToSceneCutaways>[0],
           dbAssets
         );
-        setSceneCutaways(transformedScenes);
-        console.log('[Project Load] Loaded and transformed scenes from database:', transformedScenes.length);
+
+        // Migration: Fix cutaway paths - add leading slash if missing
+        let needsUpdate = false;
+        const fixedScenes = transformedScenes.map(scene => {
+          if (scene.cutaways && scene.cutaways.length > 0) {
+            const fixedCutaways = scene.cutaways.map(cutaway => {
+              if (cutaway.video && !cutaway.video.startsWith('/') && cutaway.video.startsWith('broll/')) {
+                needsUpdate = true;
+                return { ...cutaway, video: `/${cutaway.video}` };
+              }
+              return cutaway;
+            });
+            return { ...scene, cutaways: fixedCutaways };
+          }
+          return scene;
+        });
+
+        if (needsUpdate) {
+          console.log('[Migration] Fixing cutaway paths - adding leading slashes');
+          await updateProject(currentProject.id, { scenes: fixedScenes });
+        }
+
+        setSceneCutaways(fixedScenes);
+        console.log('[Project Load] Loaded and transformed scenes from database:', fixedScenes.length);
+        console.log('[Project Load] First scene cutaways:', fixedScenes[0]?.cutaways);
+        console.log('[Project Load] Project ID:', currentProject.id);
+        console.log('[Project Load] Project Name:', currentProject.name);
 
         // Migration: DISABLED - was causing 1-minute page loads
         // This migration only needs to run once, and the project should already have 14 scenes
@@ -1008,21 +1033,64 @@ function App() {
           source={stockBrowserSource}
           initialQuery={stockBrowserQuery}
           onSelect={async (video) => {
-            console.log('Selected stock video:', video);
-            // Update the selected asset with the new stock video
-            if (selectedAsset) {
-              const updatedDescription = `Stock video by ${video.author} (${video.source})`;
+            console.log('[Stock Browser] Selected stock video:', video);
 
-              // Source is always 'pexels' or 'pixabay' from StockBrowser
+            if (!selectedAsset) {
+              setShowStockBrowser(false);
+              setStockBrowserQuery('');
+              return;
+            }
+
+            const oldPath = selectedAsset.path;
+            const oldVideoUrl = selectedAsset.videoUrl;
+
+            // Generate filename: source_id_timestamp.mp4
+            const timestamp = Date.now();
+            const videoFilename = `${video.source}_${video.id.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}.mp4`;
+
+            console.log('[Stock Browser] Downloading video to local storage...');
+            console.log('[Stock Browser] Download URL:', video.downloadUrl);
+            console.log('[Stock Browser] Target filename:', videoFilename);
+
+            // Show downloading state
+            setAssets(prev => prev.map(a =>
+              a.id === selectedAsset.id
+                ? { ...a, status: 'regenerating' as const }
+                : a
+            ));
+
+            try {
+              // Download video to public/broll/
+              const response = await fetch('/api/download-video', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  url: video.downloadUrl,
+                  filename: videoFilename
+                })
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Download failed');
+              }
+
+              const result = await response.json();
+              const localPath = result.localPath; // e.g., /broll/pexels_12345_1234567890.mp4
+
+              console.log('[Stock Browser] ✅ Downloaded to:', localPath);
+
+              const updatedDescription = `Stock video by ${video.author} (${video.source})`;
               const assetSource = video.source as 'pexels' | 'pixabay';
 
-              // Update local state
+              // Update assets with LOCAL path
               setAssets(prev => prev.map(a =>
                 a.id === selectedAsset.id
                   ? {
                       ...a,
-                      path: video.downloadUrl,
-                      videoUrl: video.downloadUrl,
+                      path: localPath,
+                      videoUrl: localPath,
+                      filename: result.filename,
                       status: 'pending' as const,
                       description: updatedDescription,
                       source: assetSource
@@ -1030,24 +1098,65 @@ function App() {
                   : a
               ));
 
-              // Persist to database
+              // Update sceneCutaways to use the LOCAL path
+              const updatedScenes = sceneCutaways.map(scene => ({
+                ...scene,
+                cutaways: (scene.cutaways || []).map(cutaway => {
+                  if (cutaway.video === oldPath || cutaway.video === oldVideoUrl) {
+                    console.log(`[Stock Browser] Updating cutaway in ${scene.sceneId}: ${cutaway.video} -> ${localPath}`);
+                    return { ...cutaway, video: localPath };
+                  }
+                  return cutaway;
+                })
+              }));
+
+              const cutawaysUpdated = updatedScenes.some((scene, idx) =>
+                scene.cutaways.some((c, cIdx) =>
+                  c.video !== (sceneCutaways[idx]?.cutaways?.[cIdx]?.video)
+                )
+              );
+
+              if (cutawaysUpdated) {
+                console.log('[Stock Browser] Updating sceneCutaways with local paths');
+                setSceneCutaways(updatedScenes);
+              }
+
+              // Persist to database with LOCAL paths
               if (currentProject) {
                 try {
                   await updateAsset(selectedAsset.id, {
-                    path: video.downloadUrl,
-                    video_url: video.downloadUrl,
+                    path: localPath,
+                    video_url: localPath,
+                    filename: result.filename,
                     status: 'pending',
                     description: updatedDescription,
                     source: assetSource
                   });
-                  console.log('Stock video saved to database');
+                  console.log('[Stock Browser] ✅ Asset saved to database');
+
+                  if (cutawaysUpdated) {
+                    await updateProject(currentProject.id, { scenes: updatedScenes });
+                    console.log('[Stock Browser] ✅ Scene cutaways persisted to database');
+                  }
                 } catch (dbError) {
-                  console.error('Failed to save stock video to database:', dbError);
+                  console.error('[Stock Browser] ❌ Failed to save to database:', dbError);
                 }
               }
 
-              setSelectedAsset(null);
+              console.log('[Stock Browser] ✅ Complete - video downloaded and paths updated');
+
+            } catch (downloadError) {
+              console.error('[Stock Browser] ❌ Download failed:', downloadError);
+              // Revert status on failure
+              setAssets(prev => prev.map(a =>
+                a.id === selectedAsset.id
+                  ? { ...a, status: 'pending' as const }
+                  : a
+              ));
+              alert(`Failed to download video: ${downloadError}`);
             }
+
+            setSelectedAsset(null);
             setShowStockBrowser(false);
             setStockBrowserQuery('');
           }}

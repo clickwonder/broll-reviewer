@@ -25,3 +25,17 @@ npm-debug.log*
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Video files (too large for GitHub)
+*.mp4
+*.mov
+*.avi
+*.webm
+
+# Database files
+*.db
+*.sqlite
+
+# B-roll videos and scenes
+public/broll/*.mp4
+public/scenes/*.mp4

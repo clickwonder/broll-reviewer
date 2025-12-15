@@ -19,35 +19,11 @@ export const SceneTimeline: React.FC<SceneTimelineProps> = ({
   const [expandedScene, setExpandedScene] = useState<string | null>(null);
 
   const getAssetFromPath = (path: string): BRollAsset | undefined => {
-    console.log(`[getAssetFromPath] Looking for path: ${path}`);
-    console.log(`[getAssetFromPath] Available assets:`, assets.map(a => ({
-      id: a.id,
-      filename: a.filename,
-      path: a.path,
-      videoUrl: a.videoUrl,
-      source: a.source
-    })));
+    // Match by exact path only - no filename fallback to avoid false matches
+    const asset = assets.find(a => a.path === path || a.videoUrl === path);
 
-    // Try to match by full path first
-    let asset = assets.find(a => a.path === path || a.videoUrl === path);
-    if (asset) {
-      console.log(`[getAssetFromPath] ✅ Found by full path:`, asset.filename);
-      return asset;
-    }
-
-    // Try to match by filename
-    const filename = path.split('/').pop();
-    console.log(`[getAssetFromPath] Trying filename match: ${filename}`);
-    asset = assets.find(a =>
-      a.filename === filename ||
-      a.path?.split('/').pop() === filename ||
-      a.videoUrl?.split('/').pop() === filename
-    );
-
-    if (asset) {
-      console.log(`[getAssetFromPath] ✅ Found by filename:`, asset.filename);
-    } else {
-      console.log(`[getAssetFromPath] ❌ No match found for: ${path}`);
+    if (!asset) {
+      console.log(`[SceneTimeline] ⚠️ No asset found for path: "${path}"`);
     }
 
     return asset;

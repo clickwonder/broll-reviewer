@@ -1,0 +1,152 @@
+[
+  {
+    "session_id": "70e3d90e-86d4-46a7-9515-e16c220941a7",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/70e3d90e-86d4-46a7-9515-e16c220941a7.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a1d5d4a",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a1d5d4a.jsonl"
+  },
+  {
+    "session_id": "70e3d90e-86d4-46a7-9515-e16c220941a7",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/70e3d90e-86d4-46a7-9515-e16c220941a7.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a40c46c",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a40c46c.jsonl"
+  },
+  {
+    "session_id": "4244c279-5b48-4a39-9679-fd7de4776f3c",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/4244c279-5b48-4a39-9679-fd7de4776f3c.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a41307f",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a41307f.jsonl"
+  },
+  {
+    "session_id": "4244c279-5b48-4a39-9679-fd7de4776f3c",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/4244c279-5b48-4a39-9679-fd7de4776f3c.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a4aaf44",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a4aaf44.jsonl"
+  },
+  {
+    "session_id": "4244c279-5b48-4a39-9679-fd7de4776f3c",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/4244c279-5b48-4a39-9679-fd7de4776f3c.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a824278",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a824278.jsonl"
+  },
+  {
+    "session_id": "4244c279-5b48-4a39-9679-fd7de4776f3c",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/4244c279-5b48-4a39-9679-fd7de4776f3c.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "af916e6",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-af916e6.jsonl"
+  },
+  {
+    "session_id": "05434f61-e625-47ae-a940-837d587727f4",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/05434f61-e625-47ae-a940-837d587727f4.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "abfa1da",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-abfa1da.jsonl"
+  },
+  {
+    "session_id": "05434f61-e625-47ae-a940-837d587727f4",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/05434f61-e625-47ae-a940-837d587727f4.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a16f08c",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a16f08c.jsonl"
+  },
+  {
+    "session_id": "05434f61-e625-47ae-a940-837d587727f4",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/05434f61-e625-47ae-a940-837d587727f4.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a824c35",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a824c35.jsonl"
+  },
+  {
+    "session_id": "05434f61-e625-47ae-a940-837d587727f4",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/05434f61-e625-47ae-a940-837d587727f4.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a7ec367",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a7ec367.jsonl"
+  },
+  {
+    "session_id": "05434f61-e625-47ae-a940-837d587727f4",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/05434f61-e625-47ae-a940-837d587727f4.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "af670ff",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-af670ff.jsonl"
+  },
+  {
+    "session_id": "05434f61-e625-47ae-a940-837d587727f4",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/05434f61-e625-47ae-a940-837d587727f4.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "aa9d34a",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-aa9d34a.jsonl"
+  },
+  {
+    "session_id": "05434f61-e625-47ae-a940-837d587727f4",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/05434f61-e625-47ae-a940-837d587727f4.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "ab4b2ab",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-ab4b2ab.jsonl"
+  },
+  {
+    "session_id": "05434f61-e625-47ae-a940-837d587727f4",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/05434f61-e625-47ae-a940-837d587727f4.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "ae0764f",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-ae0764f.jsonl"
+  },
+  {
+    "session_id": "05434f61-e625-47ae-a940-837d587727f4",
+    "transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/05434f61-e625-47ae-a940-837d587727f4.jsonl",
+    "cwd": "/mnt/d/Digital_Work_4/Video_Creator_Gemini/video-generator-poc/broll-reviewer",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a53247b",
+    "agent_transcript_path": "/home/mike/.claude/projects/-mnt-d-Digital-Work-4-Video-Creator-Gemini-video-generator-poc/agent-a53247b.jsonl"
+  }
+]

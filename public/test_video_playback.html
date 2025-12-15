@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><title>Video Test</title></head>
+<body>
+  <h1>Video Playback Test</h1>
+  <video id="test" controls muted style="width: 400px; border: 2px solid red;">
+    <source src="/broll/test_simple.mp4" type="video/mp4">
+  </video>
+  <div id="status"></div>
+  <script>
+    const video = document.getElementById('test');
+    const status = document.getElementById('status');
+    
+    video.addEventListener('loadedmetadata', () => {
+      status.innerHTML += '<p>✓ Metadata loaded</p>';
+    });
+    
+    video.addEventListener('error', (e) => {
+      status.innerHTML += '<p>✗ Error: ' + (video.error ? video.error.message : 'Unknown') + '</p>';
+      status.innerHTML += '<p>Error code: ' + (video.error ? video.error.code : 'N/A') + '</p>';
+    });
+    
+    setTimeout(() => {
+      status.innerHTML += '<p>ReadyState: ' + video.readyState + '</p>';
+      status.innerHTML += '<p>NetworkState: ' + video.networkState + '</p>';
+    }, 2000);
+  </script>
+</body>
+</html>

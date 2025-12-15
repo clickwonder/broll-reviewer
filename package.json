@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "server": "node server.cjs"
+    "server": "node server.cjs",
+    "transcribe": "node scripts/transcription-server.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",
