@@ -102,9 +102,9 @@ export const StockBrowser: React.FC<StockBrowserProps> = ({
   }, []); // Only run on mount
 
   const searchPexels = async (searchQuery: string, pageNum: number): Promise<{ videos: StockVideo[], total: number }> => {
-    // Use Vite proxy to avoid CORS issues
+    // Direct API call - Pexels supports CORS
     const response = await fetch(
-      `/api/pexels/videos/search?query=${encodeURIComponent(searchQuery)}&per_page=${PER_PAGE}&page=${pageNum}`,
+      `https://api.pexels.com/v1/videos/search?query=${encodeURIComponent(searchQuery)}&per_page=${PER_PAGE}&page=${pageNum}`,
       {
         headers: {
           'Authorization': PEXELS_API_KEY
@@ -144,9 +144,9 @@ export const StockBrowser: React.FC<StockBrowserProps> = ({
   };
 
   const searchPixabay = async (searchQuery: string, pageNum: number): Promise<{ videos: StockVideo[], total: number }> => {
-    // Use Vite proxy to avoid CORS issues
+    // Direct API call - Pixabay supports CORS
     const response = await fetch(
-      `/api/pixabay/videos/?key=${PIXABAY_API_KEY}&q=${encodeURIComponent(searchQuery)}&per_page=${PER_PAGE}&page=${pageNum}`
+      `https://pixabay.com/api/videos/?key=${PIXABAY_API_KEY}&q=${encodeURIComponent(searchQuery)}&per_page=${PER_PAGE}&page=${pageNum}`
     );
 
     if (!response.ok) {
