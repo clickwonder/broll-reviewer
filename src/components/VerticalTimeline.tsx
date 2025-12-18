@@ -3,10 +3,27 @@ import { BRollAsset, SceneCutaway, CutawayConfig, StockSource } from '../types';
 import { StockBrowser } from './StockBrowser';
 import { generateBRoll, ImageModel, VideoModel, GenerationProgress } from '../services/kieService';
 import { downloadAndSaveStockVideo, StockVideoInfo, DownloadProgress } from '../services/stockStorageService';
-import { SCENE_SEEK_TIMES, getCurrentScene } from '../sceneSeekTimes';
+// Note: Removed hardcoded SCENE_SEEK_TIMES - now using dynamic getCurrentSceneFromScenes()
 import { CaptionOverlay } from './CaptionOverlay';
 import { CaptionPage, createCaptionPages } from '../utils/captions';
 import { getCaptionsForScene, defaultCaptionStyle } from '../config/captions.config';
+
+// Fast video server running on native Linux filesystem (1000x faster than WSL2/Vite)
+// Server: python3 -m http.server 8888 from ~/broll-videos/
+// Using WSL2 IP (172.20.67.11) so Windows browser can access it
+const FAST_VIDEO_SERVER = 'http://172.20.67.11:8888';
+
+// Video URL helper - routes videos through fast native Linux server
+const getVideoUrl = (path: string): string => {
+  if (!path) return path;
+  // Already a full URL - return as-is
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  // Route video files through fast server
+  if (path.startsWith('/scenes/') || path.startsWith('/broll/')) {
+    return `${FAST_VIDEO_SERVER}${path}`;
+  }
+  return path;
+};
 
 interface CutawayUpdate {
   startTime?: number;
@@ -16,6 +33,7 @@ interface CutawayUpdate {
 interface VerticalTimelineProps {
   scenes: SceneCutaway[];
   assets: BRollAsset[];
+  videoSource?: string; // Base video source, defaults to '/scenes/full_video.mp4'
   onApprove: (assetId: string) => void;
   onReject: (assetId: string) => void;
   onRegenerate: (assetId: string) => void;
@@ -27,6 +45,7 @@ interface VerticalTimelineProps {
 export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
   scenes,
   assets,
+  videoSource = '/scenes/full_video.mp4',
   onApprove,
   onReject,
   onRegenerate,
@@ -98,6 +117,7 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({
         totalDuration={totalDuration}
         getAssetFromPath={getAssetFromPath}
         assets={assets}
+        videoSource={videoSource}
         onUpdateCutaway={onUpdateCutaway}
         onTimelineClick={(sceneId, time) => setTriggerInsertModal({ sceneId, time })}
       />
@@ -220,6 +240,7 @@ interface FullVideoPreviewProps {
   totalDuration: number;
   getAssetFromPath: (path: string) => BRollAsset | undefined;
   assets: BRollAsset[]; // Added to trigger re-renders on asset changes
+  videoSource: string; // Base video source path
   onUpdateCutaway?: (sceneId: string, cutawayIndex: number, updates: CutawayUpdate) => void;
   onTimelineClick?: (sceneId: string, time: number) => void; // Trigger insert modal for a scene
 }
@@ -241,6 +262,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   totalDuration,
   getAssetFromPath,
   assets,
+  videoSource,
   onUpdateCutaway,
   onTimelineClick
 }) => {
@@ -254,6 +276,25 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   const [activeScene, setActiveScene] = useState<string | null>(null);
   const [activeCutaway, setActiveCutaway] = useState<string | null>(null);
   const [activeCutawayAsset, setActiveCutawayAsset] = useState<BRollAsset | null>(null);
+
+  // Helper: Find current scene from dynamic scenes array (not hardcoded SCENE_SEEK_TIMES)
+  const getCurrentSceneFromScenes = useCallback((time: number) => {
+    let cumulativeStart = 0;
+    for (let i = 0; i < scenes.length; i++) {
+      const scene = scenes[i];
+      const duration = scene.duration || 15; // fallback duration
+      if (time >= cumulativeStart && time < cumulativeStart + duration) {
+        return {
+          sceneIndex: i + 1,
+          startTime: cumulativeStart,
+          duration,
+          scene
+        };
+      }
+      cumulativeStart += duration;
+    }
+    return null;
+  }, [scenes]);
   const [previewHeight, setPreviewHeight] = useState(480); // Default height in pixels
   const [isResizing, setIsResizing] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -263,6 +304,10 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
   const startYRef = useRef<number>(0);
   const startHeightRef = useRef<number>(0);
   const prevTimeRef = useRef<number>(0); // Track previous time to detect unexpected jumps
+
+  // Scrubbing state for timeline seek
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const sceneMarkersRef = useRef<HTMLDivElement>(null);
 
   // Full timeline drag state
   const cutawayTimelineRef = useRef<HTMLDivElement>(null);
@@ -276,6 +321,22 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
   // Assets prop ensures re-renders when B-roll URLs change
   void assets; // Used for prop-based re-rendering
+
+  // Debug: Log scenes and cutaways on mount
+  useEffect(() => {
+    console.log('[VerticalTimeline] === VIDEO INFRASTRUCTURE DEBUG ===');
+    console.log('[VerticalTimeline] Fast video server:', FAST_VIDEO_SERVER);
+    console.log('[VerticalTimeline] Main video URL:', getVideoUrl(videoSource));
+    console.log('[VerticalTimeline] Scenes loaded:', scenes.length);
+    console.log('[VerticalTimeline] First scene ID:', scenes[0]?.sceneId);
+    console.log('[VerticalTimeline] First scene cutaways:', scenes[0]?.cutaways?.length || 0);
+    if (scenes[0]?.cutaways?.[0]) {
+      console.log('[VerticalTimeline] First cutaway URL:', getVideoUrl(scenes[0].cutaways[0].video));
+    }
+    const totalCutaways = scenes.reduce((sum, s) => sum + (s.cutaways?.length || 0), 0);
+    console.log('[VerticalTimeline] Total cutaways:', totalCutaways);
+    console.log('[VerticalTimeline] ================================');
+  }, [scenes, videoSource]);
 
   // Handle drag operations for the full timeline cutaway blocks
   useEffect(() => {
@@ -434,6 +495,40 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
     }
   }, [activeScene]);
 
+  // Handle scrubbing (drag to seek) on timeline
+  useEffect(() => {
+    if (!isScrubbing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Use either scene markers or cutaway timeline ref for position calculation
+      const rect = sceneMarkersRef.current?.getBoundingClientRect() ||
+                   cutawayTimelineRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const clickX = e.clientX - rect.left;
+      const scrubTime = Math.max(0, Math.min((clickX / rect.width) * totalDuration, totalDuration));
+
+      // Update video position during scrub
+      if (videoRef.current) {
+        videoRef.current.currentTime = scrubTime;
+        setCurrentTime(scrubTime);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsScrubbing(false);
+      console.log('[SCRUB END] Stopped scrubbing');
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isScrubbing, totalDuration]);
+
   const handleResizeStart = (e: React.MouseEvent) => {
     startYRef.current = e.clientY;
     startHeightRef.current = previewHeight;
@@ -517,10 +612,10 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
         }
       }, 100);
 
-      // Update active scene
-      const scene = getCurrentScene(time);
-      if (scene) {
-        const sceneId = `scene_${String(scene.sceneIndex).padStart(2, '0')}`;
+      // Update active scene using dynamic scenes array
+      const sceneInfo = getCurrentSceneFromScenes(time);
+      if (sceneInfo) {
+        const sceneId = sceneInfo.scene.sceneId;
         console.log(`[SEEKTO] Setting active scene to: ${sceneId}`);
         setActiveScene(sceneId);
       }
@@ -763,7 +858,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
               {/* Single combined video */}
               <video
                 ref={videoRef}
-                src="/scenes/full_video.mp4"
+                src={getVideoUrl(videoSource)}
                 playsInline
                 preload="auto"
                 style={{
@@ -789,24 +884,49 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
                     setCurrentTime(newTime);
 
-                    // Update active scene based on current time
-                    const scene = getCurrentScene(newTime);
-                    if (scene) {
-                      const sceneId = `scene_${String(scene.sceneIndex).padStart(2, '0')}`;
+                    // Update active scene based on current time using dynamic scenes array
+                    const sceneInfo = getCurrentSceneFromScenes(newTime);
+                    if (sceneInfo) {
+                      const { scene: currentScene, startTime: sceneStartTime } = sceneInfo;
+                      const sceneId = currentScene.sceneId;
                       setActiveScene(sceneId);
 
-                      // Check if we're in a cutaway (logging reduced to avoid spam)
-                      const sceneLocalTime = videoRef.current.currentTime - scene.startTime;
+                      // Check if we're in a cutaway
+                      const sceneLocalTime = videoRef.current.currentTime - sceneStartTime;
 
                       let foundCutaway = false;
-                      const currentScene = scenes.find(s => s.sceneId === sceneId);
+
+                      // Debug logging (every 2 seconds to avoid spam)
+                      if (Math.floor(videoRef.current.currentTime) % 2 === 0 && Math.floor(videoRef.current.currentTime * 10) % 10 < 2) {
+                        console.log(`[Cutaway Debug] sceneId: ${sceneId}, cutaways: ${currentScene?.cutaways?.length || 0}, localTime: ${sceneLocalTime.toFixed(1)}s`);
+                        // Log cutaway timing details
+                        if (currentScene?.cutaways) {
+                          currentScene.cutaways.forEach((c, i) => {
+                            const inRange = sceneLocalTime >= c.startTime && sceneLocalTime < c.startTime + c.duration;
+                            console.log(`  [Cutaway ${i}] startTime: ${c.startTime}, duration: ${c.duration}, endTime: ${c.startTime + c.duration}, inRange: ${inRange}`);
+                          });
+                        }
+                      }
 
                       if (currentScene && currentScene.cutaways) {
                         for (const cutaway of currentScene.cutaways) {
                           if (sceneLocalTime >= cutaway.startTime && sceneLocalTime < cutaway.startTime + cutaway.duration) {
+                            console.log(`[CUTAWAY TRIGGERED] ${cutaway.video} at localTime ${sceneLocalTime.toFixed(2)}s`);
                             setActiveCutaway(cutaway.video);
                             const asset = getAssetFromPath(cutaway.video);
-                            setActiveCutawayAsset(asset || null);
+                            // Create fallback asset if not found in assets array
+                            const fallbackAsset: BRollAsset = {
+                              id: cutaway.video,
+                              filename: cutaway.video.split('/').pop() || 'unknown.mp4',
+                              path: cutaway.video,
+                              description: '',
+                              status: 'pending',
+                              usedInScenes: [],
+                              source: 'pexels',
+                              createdAt: new Date().toISOString(),
+                              versions: []
+                            };
+                            setActiveCutawayAsset(asset || fallbackAsset);
                             foundCutaway = true;
                             break;
                           }
@@ -825,26 +945,37 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
               />
 
               {/* Cutaway video overlay - shows the actual B-roll asset */}
-              {showWithCutaways && activeCutawayAsset && (
-                <video
-                  key={`cutaway-${activeCutawayAsset.id}-${activeCutawayAsset.path}`}
-                  ref={cutawayVideoRef}
-                  src={activeCutawayAsset.path}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    zIndex: 1
-                  }}
-                  autoPlay={isPlaying}
-                  muted
-                  loop
-                  playsInline
-                />
-              )}
+              {showWithCutaways && activeCutawayAsset && (() => {
+                const videoUrl = getVideoUrl(activeCutawayAsset.path);
+                console.log(`[CUTAWAY RENDER] Rendering cutaway video: ${videoUrl}`);
+                return (
+                  <video
+                    key={`cutaway-${activeCutawayAsset.id}-${activeCutawayAsset.path}`}
+                    ref={cutawayVideoRef}
+                    src={videoUrl}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      zIndex: 1
+                    }}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    onLoadedData={() => {
+                      console.log(`[CUTAWAY LOADED] Video loaded: ${videoUrl}`);
+                      if (isPlaying && cutawayVideoRef.current) {
+                        cutawayVideoRef.current.play().catch(e => console.error('[CUTAWAY PLAY ERROR]', e));
+                      }
+                    }}
+                    onError={(e) => console.error(`[CUTAWAY ERROR] Failed to load: ${videoUrl}`, e)}
+                  />
+                );
+              })()}
 
               {/* Play/Pause Overlay */}
               <div
@@ -881,9 +1012,9 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
               {/* TikTok-style Captions */}
               {showCaptions && captionPages.length > 0 && (() => {
-                // Calculate scene-relative time for captions
-                const scene = getCurrentScene(currentTime);
-                const sceneRelativeTime = scene ? (currentTime - scene.startTime) * 1000 : 0;
+                // Calculate scene-relative time for captions using dynamic scenes array
+                const sceneInfo = getCurrentSceneFromScenes(currentTime);
+                const sceneRelativeTime = sceneInfo ? (currentTime - sceneInfo.startTime) * 1000 : 0;
 
                 return (
                   <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
@@ -946,14 +1077,28 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
 
             {/* Timeline Scrubber */}
             <div style={{ marginTop: '16px' }}>
-              {/* Scene markers */}
-              <div style={{
-                position: 'relative',
-                height: '32px',
-                background: '#0f172a',
-                borderRadius: '8px 8px 0 0',
-                overflow: 'hidden'
-              }}>
+              {/* Scene markers - Click anywhere to seek, drag to scrub */}
+              <div
+                ref={sceneMarkersRef}
+                style={{
+                  position: 'relative',
+                  height: '32px',
+                  background: '#0f172a',
+                  borderRadius: '8px 8px 0 0',
+                  overflow: 'hidden',
+                  cursor: isScrubbing ? 'grabbing' : 'pointer'
+                }}
+                onMouseDown={(e) => {
+                  // Start scrubbing on mouse down
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const clickX = e.clientX - rect.left;
+                  const clickedTime = (clickX / rect.width) * totalDuration;
+                  console.log(`[SCRUB START] Starting scrub at ${clickedTime.toFixed(2)}s`);
+                  seekTo(Math.max(0, Math.min(clickedTime, totalDuration)));
+                  setIsScrubbing(true);
+                  e.preventDefault(); // Prevent text selection during drag
+                }}
+              >
                 {scenes.map((scene, idx) => (
                   <div
                     key={scene.sceneId || `scene-marker-${idx}`}
@@ -988,7 +1133,7 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                 ))}
               </div>
 
-              {/* Cutaway markers - Interactive with drag/resize */}
+              {/* Cutaway markers - Interactive with drag/resize, click/drag to scrub */}
               <div
                 ref={cutawayTimelineRef}
                 style={{
@@ -996,11 +1141,11 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                   height: '28px',
                   background: '#1e293b',
                   borderRadius: '0 0 8px 8px',
-                  cursor: 'pointer'
+                  cursor: isScrubbing ? 'grabbing' : 'pointer'
                 }}
-                onClick={(e) => {
+                onMouseDown={(e) => {
                   // Only handle clicks on the timeline background, not on cutaway bars
-                  if (e.target === e.currentTarget && onTimelineClick) {
+                  if (e.target === e.currentTarget) {
                     const rect = cutawayTimelineRef.current?.getBoundingClientRect();
                     if (!rect) return;
 
@@ -1008,24 +1153,30 @@ const FullVideoPreview: React.FC<FullVideoPreviewProps> = ({
                     const clickX = e.clientX - rect.left;
                     const clickedTime = (clickX / rect.width) * totalDuration;
 
-                    // Find which scene this time falls into
-                    const scene = scenes.find(s =>
-                      clickedTime >= s.sceneStart &&
-                      clickedTime < s.sceneStart + s.sceneDuration
-                    );
+                    // Shift+click opens insert modal, normal click/drag scrubs
+                    if (e.shiftKey && onTimelineClick) {
+                      // Find which scene this time falls into
+                      const scene = scenes.find(s =>
+                        clickedTime >= s.sceneStart &&
+                        clickedTime < s.sceneStart + s.sceneDuration
+                      );
 
-                    if (scene) {
-                      // Calculate scene-relative start time
-                      const startTime = clickedTime - scene.sceneStart;
-
-                      console.log(`[Timeline Click] Triggering insert modal for ${scene.sceneId} at ${startTime.toFixed(1)}s`);
-
-                      // Trigger the insert modal for this scene
-                      onTimelineClick(scene.sceneId, Math.max(0, Math.round(startTime * 10) / 10));
+                      if (scene) {
+                        // Calculate scene-relative start time
+                        const startTime = clickedTime - scene.sceneStart;
+                        console.log(`[Timeline Shift+Click] Triggering insert modal for ${scene.sceneId} at ${startTime.toFixed(1)}s`);
+                        onTimelineClick(scene.sceneId, Math.max(0, Math.round(startTime * 10) / 10));
+                      }
+                    } else {
+                      // Normal click = start scrubbing
+                      console.log(`[SCRUB START] Starting scrub at ${clickedTime.toFixed(2)}s (cutaway timeline)`);
+                      seekTo(Math.max(0, Math.min(clickedTime, totalDuration)));
+                      setIsScrubbing(true);
+                      e.preventDefault(); // Prevent text selection during drag
                     }
                   }
                 }}
-                title="Click on empty timeline area to insert B-roll"
+                title="Click to seek • Shift+click to insert B-roll"
               >
                 {allCutaways.map((cutaway, idx) => {
                   const asset = getAssetFromPath(cutaway.video);
@@ -2194,7 +2345,7 @@ const SceneBlock: React.FC<SceneBlockProps> = ({
                           alignItems: 'center'
                         }}>
                           <video
-                            src={selectedAssetForInsert}
+                            src={getVideoUrl(selectedAssetForInsert)}
                             style={{
                               width: '100px',
                               height: '56px',
@@ -2841,7 +2992,7 @@ const CutawayDetail: React.FC<CutawayDetailProps> = ({
           <>
             <video
               ref={videoRef}
-              src={videoSrc}
+              src={getVideoUrl(videoSrc)}
               style={{
                 width: '100%',
                 height: '100%',
