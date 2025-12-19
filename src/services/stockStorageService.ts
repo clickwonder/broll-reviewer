@@ -29,14 +29,10 @@ export interface DownloadProgress {
 
 /**
  * Check if the backend server is available
+ * Disabled - backend server not in use for this project
  */
 export async function isStorageAvailable(): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_BASE}/api/health`);
-    return response.ok;
-  } catch {
-    return false;
-  }
+  return false;
 }
 
 /**

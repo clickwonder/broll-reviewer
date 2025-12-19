@@ -11,6 +11,11 @@ import { ProjectSelector } from './components/ProjectSelector';
 import { buildImagePrompt, buildVideoPrompt } from './services/brollService';
 import { generateBRoll, GenerationProgress, ImageModel as KieImageModel, VideoModel as KieVideoModel } from './services/kieService';
 import {
+  medicalBillsAssets,
+  medicalBillsSceneCutaways,
+  MEDICAL_BILLS_VIDEO_SOURCE
+} from './config/medicalBillsProject';
+import {
   DBProject,
   DBBRollAsset,
   saveProject,
@@ -403,6 +408,16 @@ import { CutawayConfig } from './types';
 
 type ViewMode = 'grid' | 'timeline' | 'vertical';
 
+// Helper function to convert project name to folder-safe slug
+// e.g., "Medical Bills" -> "medical-bills"
+function projectNameToSlug(name: string | undefined): string {
+  if (!name) return 'default';
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '');      // Remove leading/trailing hyphens
+}
+
 function App() {
   const [currentProject, setCurrentProject] = useState<DBProject | null>(null);
   const [assets, setAssets] = useState<BRollAsset[]>(initialBRollAssets);
@@ -561,6 +576,13 @@ function App() {
     const loadProjectData = async () => {
       if (!currentProject) return;
 
+      // Detect Medical Bills project by name
+      const isMedicalBillsProject = currentProject.name?.toLowerCase().includes('medical bill');
+      const defaultAssets = isMedicalBillsProject ? medicalBillsAssets : initialBRollAssets;
+      const defaultScenes = isMedicalBillsProject ? medicalBillsSceneCutaways : initialSceneCutaways;
+
+      console.log(`[Project Load] Loading project: ${currentProject.name} (Type: ${isMedicalBillsProject ? 'Medical Bills' : 'Medical Debt'})`);
+
       // Use project settings if available
       if (currentProject.settings) {
         setSettings(currentProject.settings);
@@ -573,14 +595,14 @@ function App() {
         if (dbAssets.length > 0) {
           setAssets(dbAssets.map(dbAssetToAppAsset));
         } else {
-          setAssets(initialBRollAssets);
-          for (const asset of initialBRollAssets) {
+          setAssets(defaultAssets);
+          for (const asset of defaultAssets) {
             await saveAsset(currentProject.id, appAssetToDbFormat(asset));
           }
         }
       } catch (error) {
         console.error('Failed to load project assets:', error);
-        setAssets(initialBRollAssets);
+        setAssets(defaultAssets);
       }
 
       // Load and transform scenes from project
@@ -620,10 +642,10 @@ function App() {
 
         // Migration: DISABLED - was causing 1-minute page loads
         // This migration only needs to run once, and the project should already have 14 scenes
-        if (false && transformedScenes.length < 14) {
+        if (false && transformedScenes.length < 14 && currentProject) {
           console.log('[Migration] Project has only', transformedScenes.length, 'scenes. Updating to 14 scenes...');
           try {
-            await updateProject(currentProject.id, {
+            await updateProject(currentProject!.id, {
               scenes: initialSceneCutaways,
               description: `Educational video about medical debt on credit reports - 14 scenes with statistics and cutaways`
             });
@@ -634,7 +656,7 @@ function App() {
             for (const asset of initialBRollAssets) {
               const existingAsset = dbAssets.find(a => a.id === asset.id || a.filename === asset.filename);
               if (!existingAsset) {
-                await saveAsset(currentProject.id, appAssetToDbFormat(asset));
+                await saveAsset(currentProject!.id, appAssetToDbFormat(asset));
                 console.log('[Migration] Added missing asset:', asset.filename);
               }
             }
@@ -643,9 +665,9 @@ function App() {
           }
         }
       } else {
-        // Fall back to initial scenes
-        setSceneCutaways(initialSceneCutaways);
-        console.log('[Project Load] Using initial scenes (no saved scenes in database)');
+        // Fall back to default scenes based on project type
+        setSceneCutaways(defaultScenes);
+        console.log(`[Project Load] Using default ${isMedicalBillsProject ? 'Medical Bills' : 'Medical Debt'} scenes (no saved scenes in database)`);
       }
     };
 
@@ -659,15 +681,23 @@ function App() {
 
   const handleCreateProject = async (name: string, description: string) => {
     try {
-      const newProject = await saveProject(name, description, DEFAULT_SETTINGS, initialSceneCutaways);
+      // Detect if this is a Medical Bills project by name
+      const isMedicalBillsProject = name.toLowerCase().includes('medical bill');
+
+      // Use appropriate configuration based on project type
+      const projectAssets = isMedicalBillsProject ? medicalBillsAssets : initialBRollAssets;
+      const projectScenes = isMedicalBillsProject ? medicalBillsSceneCutaways : initialSceneCutaways;
+
+      const newProject = await saveProject(name, description, DEFAULT_SETTINGS, projectScenes);
       if (newProject) {
         setCurrentProject(newProject);
-        setAssets(initialBRollAssets);
-        setSceneCutaways(initialSceneCutaways);
+        setAssets(projectAssets);
+        setSceneCutaways(projectScenes);
         // Save initial assets to the new project
-        for (const asset of initialBRollAssets) {
+        for (const asset of projectAssets) {
           await saveAsset(newProject.id, appAssetToDbFormat(asset));
         }
+        console.log(`[Project Created] ${name} - Type: ${isMedicalBillsProject ? 'Medical Bills' : 'Medical Debt'}`);
       }
     } catch (error) {
       console.error('Failed to create project:', error);
@@ -935,6 +965,13 @@ function App() {
           <VerticalTimeline
             scenes={sceneCutaways}
             assets={assets}
+            videoSource={
+              // Detect Medical Bills project by name or scene IDs
+              currentProject?.name?.toLowerCase().includes('medical bill') ||
+              sceneCutaways.some(s => s.sceneId?.startsWith('scene_mb_'))
+                ? MEDICAL_BILLS_VIDEO_SOURCE
+                : '/scenes/full_video.mp4'
+            }
             onApprove={handleApprove}
             onReject={handleReject}
             onRegenerate={handleRegenerate}
@@ -1023,7 +1060,18 @@ function App() {
             setShowStockBrowser(true);
           }}
           scenes={sceneCutaways}
-          onScenesUpdate={setSceneCutaways}
+          onScenesUpdate={async (newScenes) => {
+            setSceneCutaways(newScenes);
+            // Persist to database
+            if (currentProject) {
+              try {
+                await updateProject(currentProject.id, { scenes: newScenes });
+                console.log('[Settings] Scenes persisted to database');
+              } catch (error) {
+                console.error('[Settings] Failed to persist scenes:', error);
+              }
+            }
+          }}
           projectId={currentProject?.id}
         />
       )}
@@ -1060,13 +1108,26 @@ function App() {
             ));
 
             try {
-              // Download video to public/broll/
-              const response = await fetch('/api/download-video', {
+              // Download video to public/broll/ via backend server on port 3002
+              // Using WSL2 IP so Windows browser can access it
+              const DOWNLOAD_SERVER = 'http://172.20.67.11:3002';
+
+              // Use the original asset's filename when replacing an existing asset
+              // This keeps familiar names like "worried_person_bills" instead of "stock_pexels_123_456789"
+              const baseFilename = selectedAsset.filename
+                ? selectedAsset.filename.replace(/\.mp4$/, '')  // Remove .mp4 extension
+                : null;
+
+              const response = await fetch(`${DOWNLOAD_SERVER}/api/download-stock-video`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   url: video.downloadUrl,
-                  filename: videoFilename
+                  source: video.source,
+                  videoId: video.id,
+                  projectId: projectNameToSlug(currentProject?.name),
+                  // Send the desired filename (without extension)
+                  desiredFilename: baseFilename
                 })
               });
 
@@ -1076,7 +1137,7 @@ function App() {
               }
 
               const result = await response.json();
-              const localPath = result.localPath; // e.g., /broll/pexels_12345_1234567890.mp4
+              const localPath = result.localUrl; // e.g., /broll/stock_pexels_12345_1234567890.mp4
 
               console.log('[Stock Browser] ✅ Downloaded to:', localPath);
 

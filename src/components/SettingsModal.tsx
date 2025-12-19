@@ -9,6 +9,7 @@ import {
   VIDEO_MODEL_INFO
 } from '../types';
 import { isExternalStockUrl, migrateExternalUrls, isStorageAvailable } from '../services/stockStorageService';
+import { medicalBillsSceneCutaways } from '../config/medicalBillsProject';
 
 interface SettingsModalProps {
   settings: GenerationSettings;
@@ -291,18 +292,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             }}>
               <ConfigSummary
                 label="Image Model"
-                value={IMAGE_MODEL_INFO[settings.imageModel].name}
+                value={IMAGE_MODEL_INFO[settings.imageModel]?.name || 'Unknown'}
                 color="#22c55e"
               />
               <ConfigSummary
                 label="Video Model"
-                value={VIDEO_MODEL_INFO[settings.videoModel].name}
+                value={VIDEO_MODEL_INFO[settings.videoModel]?.name || 'Unknown'}
                 color="#3b82f6"
               />
               <ConfigSummary
                 label="Stock Source"
-                value={settings.stockSource === 'none' ? 'Disabled' : settings.stockSource.charAt(0).toUpperCase() + settings.stockSource.slice(1)}
-                color={settings.stockSource === 'none' ? '#64748b' : '#f59e0b'}
+                value={!settings.stockSource || settings.stockSource === 'none' ? 'Disabled' : settings.stockSource.charAt(0).toUpperCase() + settings.stockSource.slice(1)}
+                color={!settings.stockSource || settings.stockSource === 'none' ? '#64748b' : '#f59e0b'}
               />
             </div>
           </Section>
@@ -455,6 +456,64 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </p>
                   </>
                 )}
+              </div>
+            </Section>
+          )}
+
+          {/* Reset Scenes for Medical Bills Project */}
+          {scenes && onScenesUpdate && (
+            <Section title="Project Scenes" icon="🎬">
+              <div style={{
+                padding: '16px',
+                background: '#0f172a',
+                borderRadius: '10px',
+                border: '1px solid #334155'
+              }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <p style={{ fontSize: '13px', fontWeight: 500, color: '#f1f5f9', margin: 0 }}>
+                    Current Scenes: {scenes.length}
+                  </p>
+                  <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                    Scene IDs: {scenes.slice(0, 3).map(s => s.sceneId).join(', ')}{scenes.length > 3 ? '...' : ''}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (confirm('Reset all scenes to Medical Bills configuration? This will replace current cutaway settings.')) {
+                      onScenesUpdate(medicalBillsSceneCutaways);
+                      console.log('[Settings] Reset scenes to Medical Bills configuration');
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: 'linear-gradient(135deg, #f59e0b20, #ef444420)',
+                    border: '2px solid #f59e0b',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#f59e0b' }}>
+                    Reset to Medical Bills Scenes (14 scenes)
+                  </span>
+                </button>
+                <p style={{
+                  fontSize: '10px',
+                  color: '#64748b',
+                  margin: '12px 0 0 0',
+                  textAlign: 'center'
+                }}>
+                  Loads scene_mb_01 through scene_mb_14 with pre-configured B-roll cutaways
+                </p>
               </div>
             </Section>
           )}
